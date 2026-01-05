@@ -224,25 +224,45 @@ enLog_TraceVars(
     enLog_Vars(TRACE, var_names, var_values);
 }
 
-enLog_Params(
+enLog_ParamsResult(
     integer level,
     string function_name,
     list param_names,
-    list param_values
-    )
+    list param_values,
+    string result
+)
 {
     string params;
     if (param_values != []) params = "\n        " + llDumpList2String(enList_Concatenate("", param_names, " = ", param_values, ""), ",\n        ") + "\n    ";
-    enLog_To(level, __LINE__, "", function_name + enString_If(function_name == "", "[", "(") + params + enString_If(function_name == "", "]", ")"));
+    enLog_To(
+        level,
+        __LINE__,
+        "",
+        function_name
+            + enString_If(function_name == "", "[", "(")
+            + params
+            + enString_If(function_name == "", "]", ")")
+            + enString_If(result == FLAG_ENLOG_PARAMS_NORESULT, "", " = \"" + result + "\"")
+    );
 }
 
 enLog_TraceParams(
     string function_name,
     list param_names,
     list param_values
-    )
+)
 {
-    enLog_Params(TRACE, function_name, param_names, param_values);
+    enLog_ParamsResult(TRACE, function_name, param_names, param_values, FLAG_ENLOG_PARAMS_NORESULT);
+}
+
+enLog_TraceParamsResult(
+    string function_name,
+    list param_names,
+    list param_values,
+    string result
+)
+{
+    enLog_ParamsResult(TRACE, function_name, param_names, param_values, result);
 }
 
 integer enLog_GetLoglevel()

@@ -30,6 +30,9 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #define DEBUG 5
 #define TRACE 6
 
+// U+FFFF
+#define FLAG_ENLOG_PARAMS_NORESULT "￿"
+
 #ifndef OVERRIDE_ENLOG_DEFAULT_LOGLEVEL
     #define OVERRIDE_ENLOG_DEFAULT_LOGLEVEL INFO
 #endif
@@ -41,24 +44,24 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #define enLog_TraceMemory() \
     enLog_Trace("Memory: " + (string)llGetUsedMemory() + " used, " + (string)llGetSPMaxMemory() + " max, " + (string)llGetMemoryLimit() + " limit, " + (string)llGetFreeMemory() + " free")
 
-#define enLog_Print(...) enLog_To( 0, __LINE__, "", __VA_ARGS__ )
-#define enLog_Fatal(...) enLog_To( 1, __LINE__, "", __VA_ARGS__ )
-#define enLog_Error(...) enLog_To( 2, __LINE__, "", __VA_ARGS__ )
-#define enLog_Warn(...) enLog_To( 3, __LINE__, "", __VA_ARGS__ )
-#define enLog_Info(...) enLog_To( 4, __LINE__, "", __VA_ARGS__ )
-#define enLog_Debug(...) enLog_To( 5, __LINE__, "", __VA_ARGS__ )
-#define enLog_Trace(...) enLog_To( 6, __LINE__, "", __VA_ARGS__ )
+#define enLog_Print(message) enLog_To(0, __LINE__, "", message)
+#define enLog_Fatal(message) enLog_To(1, __LINE__, "", message)
+#define enLog_Error(message) enLog_To(2, __LINE__, "", message)
+#define enLog_Warn(message)  enLog_To(3, __LINE__, "", message)
+#define enLog_Info(message)  enLog_To(4, __LINE__, "", message)
+#define enLog_Debug(message) enLog_To(5, __LINE__, "", message)
+#define enLog_Trace(message) enLog_To(6, __LINE__, "", message)
 
-#define enLog_PrintTo(...) enLog_To( 0, __LINE__, __VA_ARGS__ )
-#define enLog_FatalTo(...) enLog_To( 1, __LINE__, __VA_ARGS__ )
-#define enLog_ErrorTo(...) enLog_To( 2, __LINE__, __VA_ARGS__ )
-#define enLog_WarnTo(...) enLog_To( 3, __LINE__, __VA_ARGS__ )
-#define enLog_InfoTo(...) enLog_To( 4, __LINE__, __VA_ARGS__ )
-#define enLog_DebugTo(...) enLog_To( 5, __LINE__, __VA_ARGS__ )
-#define enLog_TraceTo(...) enLog_To( 6, __LINE__, __VA_ARGS__ )
+#define enLog_PrintTo(target_uuid, message) enLog_To(0, __LINE__, target_uuid, message)
+#define enLog_FatalTo(target_uuid, message) enLog_To(1, __LINE__, target_uuid, message)
+#define enLog_ErrorTo(target_uuid, message) enLog_To(2, __LINE__, target_uuid, message)
+#define enLog_WarnTo(target_uuid, message)  enLog_To(3, __LINE__, target_uuid, message)
+#define enLog_InfoTo(target_uuid, message)  enLog_To(4, __LINE__, target_uuid, message)
+#define enLog_DebugTo(target_uuid, message) enLog_To(5, __LINE__, target_uuid, message)
+#define enLog_TraceTo(target_uuid, message) enLog_To(6, __LINE__, target_uuid, message)
 
-#define enLog_Success(m) enLog_To( 0, __LINE__, "", "✅ SUCCESS: " + m)
-#define enLog_SuccessTo(u, m) enLog_To( 0, __LINE__, u, "✅ SUCCESS: " + m)
+#define enLog_Success(message) enLog_To(0, __LINE__, "", "✅ SUCCESS: " + message)
+#define enLog_SuccessTo(target_uuid, message) enLog_To(0, __LINE__, target_uuid, "✅ SUCCESS: " + message)
 
 #define enLog_GetLogtarget() \
     llLinksetDataRead("logtarget")
