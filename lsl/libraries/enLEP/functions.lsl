@@ -420,7 +420,7 @@ integer _enLEP_ProcessRPC(
             string algorithm = llJsonGetValue(json, ["s", "a"]);
             string timestamp = llJsonGetValue(json, ["s", "t"]);
 
-            if (llAbs(enDate_TimestampDiffToSeconds(timestamp, llGetTimestamp())) < OVERRIDE_ENLEP_SIGNATURE_EXPIRY)
+            if (llAbs(enDatetime_TimestampDiffToSeconds(timestamp, llGetTimestamp())) < OVERRIDE_ENLEP_SIGNATURE_EXPIRY)
             {
                 #define _ENLEP_INBOUND_SIGNATURE_MESSAGE \
                     algorithm \

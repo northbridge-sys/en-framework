@@ -14,7 +14,7 @@ An unofficial framework for the [Linden Scripting Language](https://wiki.secondl
 
 LSL and SLua are the native scripting language used to control Second Life objects. Certain third-party viewers incorporate an [LSL preprocessor](https://wiki.firestormviewer.org/fs_preprocessor) that provides C-style preprocessor macros via the built-in script editor. The En Framework leverages the `#include` and `#define` macros, along with the built-in script optimizer, to make dozens of helper functions available to LSL scripts. It can also be used with the [official Second Life VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin) to provide similar support in SLua using `require()`.
 
-**SLua support is currently limited and untested until SLua is available on a Linux-compatible viewer.**
+**SLua support is currently incomplete and untested until SLua is available on a Linux-compatible viewer.**
 
 ## Key Features
 
@@ -268,7 +268,7 @@ en_state_entry()
 {
     /*
     example of where the enLEP_RequestRPC() call could be made
-    note that enLEP_RequestRPC() returns the id - this can be stored for reference in enlep_response if desired
+    note that enLEP_RequestRPC() returns the id - this can be stored for reference in enlep_rpc_*() if desired
     */
     string id = enLEP_RequestRPC(
         LINK_THIS,
@@ -298,7 +298,7 @@ enlep_rpc_result(
     you can process the response however you like
 
     this enlep_rpc_result() function won't get called unless all of the following are true:
-    - this script receives a LEP-RPC result via link_message
+    - this script receives a LEP-RPC result via link_message()
     - the result is targeted to this script, "" (all scripts), or any script in the OVERRIDE_ENLEP_ALLOWED_TARGET_SCRIPTS list (see also FEATURE_ENLEP_ALLOW_FUZZY_TARGET_SCRIPT)
     - if OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS is defined, the response is from any script in that list (but note that source_script is self-reported, so this is NOT secure)
     - this script has defined EVENT_ENLEP_RPC_RESULT
@@ -317,11 +317,11 @@ enlep_rpc_result(
     */
     
     // convert timestamps into arbitrary millisecond-accurate integers, then get the differences between them for benchmarking
-    integer start = enDate_TimestampToMillisec(llJsonGetValue(params, ["start"])); // params is a timestamp string
-    integer mid = enDate_TimestampToMillisec(llJsonGetValue(result, ["mid"])); // result is a timestamp string
-    integer end = enDate_NowToMillisec();
+    integer start = enDatetime_TimestampToMillisec(llJsonGetValue(params, ["start"])); // params is a timestamp string
+    integer mid = enDatetime_TimestampToMillisec(llJsonGetValue(result, ["mid"])); // result is a timestamp string
+    integer end = enDatetime_NowToMillisec();
     
-    enLog_Success("Got ping result for ID " + id + " (" + (string)enDate_AddMillisec(mid, -start) + "ms for request, " + (string)enDate_AddMillisec(end, -mid) + "ms for result)");
+    enLog_Success("Got ping result for ID " + id + " (" + (string)enDatetime_AddMillisec(mid, -start) + "ms for request, " + (string)enDatetime_AddMillisec(end, -mid) + "ms for result)");
 }
 
 default

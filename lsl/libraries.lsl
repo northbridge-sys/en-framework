@@ -22,7 +22,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 // macros
 #include "northbridge-sys/en-framework/lsl/libraries/enAvatar/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enCLEP/macros.lsl"
-#include "northbridge-sys/en-framework/lsl/libraries/enDate/macros.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries/enDatetime/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enEnvironment/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enFloat/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enInteger/macros.lsl"
@@ -36,13 +36,14 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #include "northbridge-sys/en-framework/lsl/libraries/enPrim/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enRotation/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enString/macros.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries/enTest/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enTimer/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enVector/macros.lsl"
 
 // functions
 #include "northbridge-sys/en-framework/lsl/libraries/enAvatar/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enCLEP/functions.lsl"
-#include "northbridge-sys/en-framework/lsl/libraries/enDate/functions.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries/enDatetime/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enEnvironment/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enFloat/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enInteger/functions.lsl"
@@ -56,5 +57,6 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #include "northbridge-sys/en-framework/lsl/libraries/enPrim/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enRotation/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enString/functions.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries/enTest/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enTimer/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enVector/functions.lsl"

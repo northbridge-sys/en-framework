@@ -77,7 +77,7 @@ string enTimer_Start(
             id,
             callback,
             (integer)( interval * 1000 ) * (flags & FLAG_ENTIMER_PERIODIC),
-            enDate_AddMillisec( enDate_NowToMillisec(), (integer)( interval * 1000 ) ) // convert to ms
+            enDatetime_AddMillisec( enDatetime_NowToMillisec(), (integer)( interval * 1000 ) ) // convert to ms
         ];
 
         // reprocess queue
@@ -145,7 +145,7 @@ _entimer_timer()
         if ( (integer)llList2String( _ENTIMER_QUEUE, 3 ) ) llSetTimerEvent( (integer)llList2String( _ENTIMER_QUEUE, 2 ) * 0.001 ); // periodic
         else _ENTIMER_QUEUE = []; // one-shot
     #else
-        integer now = enDate_NowToMillisec();
+        integer now = enDatetime_NowToMillisec();
         integer i;
         integer l = llGetListLength( _ENTIMER_QUEUE ) / _ENTIMER_QUEUE_STRIDE;
         integer lowest = 0x7FFFFFFF;
@@ -156,7 +156,7 @@ _entimer_timer()
             string t_callback = llList2String( _ENTIMER_QUEUE, i * _ENTIMER_QUEUE_STRIDE + 1 );
             integer t_length = (integer)llList2String( _ENTIMER_QUEUE, i * _ENTIMER_QUEUE_STRIDE + 2 );
             integer t_trigger = (integer)llList2String( _ENTIMER_QUEUE, i * _ENTIMER_QUEUE_STRIDE + 3 );
-            integer remain = enDate_AddMillisec( t_trigger, -now );
+            integer remain = enDatetime_AddMillisec( t_trigger, -now );
             if ( remain * 0.001 < OVERRIDE_FLOAT_ENTIMER_MINIMUM_INTERVAL )
             { // timer triggered
                 if ( !t_length )
