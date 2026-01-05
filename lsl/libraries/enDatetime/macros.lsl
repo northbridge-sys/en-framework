@@ -102,7 +102,7 @@ Probably faster and more efficient than enDatetime_TimestampDiffToSecondsPrecise
 @return integer Difference in seconds.
 */
 #define enDatetime_TimestampDiffToSeconds(ts_a, ts_b) \
-    (enDatetime_TimestampToUnix(ts_a) - enDatetime_TimestampToUnix(ts_b))
+    (enDatetime_TimestampToUnix(ts_b) - enDatetime_TimestampToUnix(ts_a))
 
 /*!
 Get difference between two timestamps in float seconds.
@@ -111,7 +111,7 @@ Get difference between two timestamps in float seconds.
 @return float Difference in seconds, with subseconds.
 */
 #define enDatetime_TimestampDiffToSecondsPrecise(ts_a, ts_b) \
-    (enDatetime_TimestampDiffToSeconds(ts_a, ts_b) + (llList2Integer(enDatetime_TimestampToYMDHMSU(ts_a), 6) - llList2Integer(enDatetime_TimestampToYMDHMSU(ts_b), 6)) * 0.000001)
+    (enDatetime_TimestampDiffToSeconds(ts_a, ts_b) + (llList2Integer(enDatetime_TimestampToYMDHMSU(ts_b), 6) - llList2Integer(enDatetime_TimestampToYMDHMSU(ts_a), 6)) * 0.000001)
 
 /*!
 Converts ISO 8601 timestamp to pretty datetime.
