@@ -63,7 +63,8 @@ string _enLEP_FormJsonRPC(
         "s":{ <- can be omitted if message unsigned
             "a": llHMAC()/llSignRSA() algorithm,
             "t": llGetTimestamp(),
-            "s": HMAC or RSA signature using private_key (see code for underlying "message")
+            "h": HMAC hash using private_key (see code for underlying "message")     \ either "h" or "s" only!
+            "s": RSA signature using private_key (see code for underlying "message") / 
         },
         "i":(any integer) <- omitted for LEP, reserved for CLEP (applied by _enCLEP_SendRPC()); note that int must still be passed to this function if signing; use FLAG_ENLEP_EMBED_INT
     }
@@ -132,8 +133,8 @@ string _enLEP_FormJsonRPC(
                 + error_data \
                 + enString_If(enKey_IsNotNull(target_prim), target_prim + llGetRegionName() + target_region, "")
 
-            if (llGetSubString(private_key, 0, 4) == "-----") addl += ",\"a\":\"" + OVERRIDE_ENLEP_RSA_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"s\":\"" + llSignRSA(private_key, OVERRIDE_ENLEP_RSA_ALGORITHM + _ENLEP_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENLEP_RSA_ALGORITHM) + "\""; // use RSA if we were passed an RSA private key
-            else addl += ",\"a\":\"" + OVERRIDE_ENLEP_HMAC_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"s\":\"" + llHMAC(private_key, OVERRIDE_ENLEP_HMAC_ALGORITHM + _ENLEP_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENLEP_HMAC_ALGORITHM) + "\""; // use HMAC otherwise, since it accepts anything
+            if (llGetSubString(private_key, 0, 4) == "-----") addl += ",\"s\":{\"a\":\"" + OVERRIDE_ENLEP_RSA_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"s\":\"" + llSignRSA(private_key, OVERRIDE_ENLEP_RSA_ALGORITHM + _ENLEP_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENLEP_RSA_ALGORITHM) + "\"}"; // use RSA if we were passed an RSA private key
+            else addl += ",\"s\":{\"a\":\"" + OVERRIDE_ENLEP_HMAC_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"h\":\"" + llHMAC(private_key, OVERRIDE_ENLEP_HMAC_ALGORITHM + _ENLEP_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENLEP_HMAC_ALGORITHM) + "\"}"; // use HMAC otherwise, since it accepts anything
         }
     #endif
 
@@ -209,25 +210,46 @@ Processes link_message events if EVENT_ENLEP_* is defined.
 */
 integer _enLEP_link_message(
     integer l,
-    integer int,
+    integer i,
     string s,
-    string params
+    string k
 )
 {
+    integer e = _enLEP_ProcessRPC(
+        "", // source_prim
+        l, // source_link
+        s, // json
+        i, // int (used only if not in json)
+        k // params (used only if not in json)
+    );
+
     #if defined TRACE_ENLEP_LINK_MESSAGE
-        enLog_TraceParams("_enLEP_link_message", [
+        enLog_TraceParamsResult("_enLEP_link_message", [
             "l",
             "i",
             "s",
             "k"
         ], [
             l,
-            int,
+            i,
             enString_Elem(s),
-            enString_Elem(params)
-        ]);
+            enString_Elem(k)
+        ],
+        (string)e
+    );
     #endif
 
+    return e;
+}
+
+integer _enLEP_ProcessRPC(
+    string source_prim,
+    integer source_link,
+    string json,
+    integer int,
+    string params
+)
+{
     /*
     LEP messages are:
     {
@@ -256,102 +278,348 @@ integer _enLEP_link_message(
     }
     */
 
-    if (llJsonValueType(s, []) != JSON_OBJECT) return -1; // LEP messages are always objects
+    if (llJsonValueType(json, []) != JSON_OBJECT) return -1; // LEP messages are always objects
 
-    string target_script = llJsonGetValue(s, ["ts"]);
+    #if defined FEATURE_ENLEP_EXPERIMENTAL_PARSING
+        string domain;
+        string source_script;
+        string target_script;
+        string target_prim;
+        string source_region;
+        string target_region;
+        integer int;
+        string method;
+        string params;
+        string id;
+        string result;
+        integer error_code;
+        string error_message;
+        string error_data;
+        string algorithm;
+        string timestamp;
+        string signature;
+        string hash;
 
-    /// generate allowed target_scripts list
+        /*
+        uses experimental llJson2List parser for performance
+        */
+        list parsed = llJson2List(json);
+        integer i;
+        integer l = llGetListLength(parsed) / 2;
+        for (i = 0; i < l; i++)
+        {
+            string name = llList2String(parsed, i * 2);
+            string data = llList2String(parsed, i * 2 + 1);
+            if (name == "d") domain = data;
+            else if (name == "ss") source_script = data;
+            else if (name == "ts") target_script = data;
+            else if (name == "sp") source_prim = data;
+            else if (name == "tp") target_prim = data;
+            else if (name == "sr") source_region = data;
+            else if (name == "tr") target_region = data;
+            else if (name == "i") int = (integer)data;
+            else if (name == "m") method = data;
+            else if (name == "p") params = data;
+            else if (name == "id") id = data;
+            else if (name == "r") result = data;
+            else if (name == "e")
+            {
+                error_code = (integer)llJsonGetValue(data, ["c"]);
+                error_message = llJsonGetValue(data, ["m"]);
+                if (llJsonValueType(data, ["d"]) != JSON_INVALID) error_data = llJsonGetValue(data, ["d"]);
+            }
+            else if (name == "s")
+            {
+                algorithm = llJsonGetValue(data, ["a"]);
+                timestamp = llJsonGetValue(data, ["t"]);
+                signature = llJsonGetValue(data, ["s"]);
+                hash = llJsonGetValue(data, ["h"]);
+            }
+        }
+    #endif
+
+    string target_region = llJsonGetValue(json, ["tr"]);
+    if (target_region == JSON_INVALID) target_region = "";
+    #if !defined FEATURE_ENLEP_ALLOW_ALL_TARGET_REGIONS
+        if (target_region != "")
+        {
+            if (target_region != llGetRegionName()) return 1; // not targeted to this region
+        }
+    #endif
+
+    #if !defined FEATURE_ENLEP_EXPERIMENTAL_PARSING
+        string target_prim = llJsonGetValue(json, ["tp"]);
+        if (target_prim == JSON_INVALID) target_prim = "";
+    #endif
+    #if !defined FEATURE_ENLEP_ALLOW_ALL_TARGET_PRIMS
+        if (target_prim != "")
+        {
+            if (target_prim != (string)llGetKey()) return 2; // not targeted to this prim
+        }
+    #endif
+
+    string target_script = llJsonGetValue(json, ["ts"]);
     list allowed_targets = ["", llGetScriptName()]; // allow messages targeted to "" (all) and this script only
     #if defined OVERRIDE_ENLEP_ALLOWED_TARGET_SCRIPTS
         allowed_targets += OVERRIDE_ENLEP_ALLOWED_TARGET_SCRIPTS; // allow messages targeted to OVERRIDE_ENLEP_ALLOWED_TARGET_SCRIPTS list as well
     #endif
-    #if defined FEATURE_ENLEP_ALLOW_ALL_TARGET_SCRIPTS
-        allowed_targets += [target_script]; // always match - this is less efficient, but this flag is only used for debugging anyway
+    #if !defined FEATURE_ENLEP_ALLOW_ALL_TARGET_SCRIPTS
+    // filter out messages not targeted to a script in allowed_targets
+        if (llListFindList(allowed_targets, [target_script]) == -1)
+        {
+    #endif
+            #if !defined FEATURE_ENLEP_ALLOW_ALL_TARGET_SCRIPTS && defined FEATURE_ENLEP_ALLOW_FUZZY_TARGET_SCRIPT
+                // using substring matching
+                if (llSubStringIndex(llGetScriptName(), target_script) == -1) return 3; // discard otherwise valid LEP message, not targeted to us
+            #endif
+            #if !defined FEATURE_ENLEP_ALLOW_ALL_TARGET_SCRIPTS && !defined FEATURE_ENLEP_ALLOW_FUZZY_TARGET_SCRIPT
+                // using exact matching
+                return 4; // discard otherwise valid LEP message, not targeted to us
+            #endif
+    #if !defined FEATURE_ENLEP_ALLOW_ALL_TARGET_SCRIPTS
+        }
     #endif
 
-    // filter out messages not targeted to a script in allowed_targets
-    if (llListFindList(allowed_targets, [target_script]) == -1)
-    {
-        #if defined FEATURE_ENLEP_ALLOW_FUZZY_TARGET_SCRIPT
-            // using substring matching
-            if (llSubStringIndex(llGetScriptName(), target_script) == -1) return 1; // discard otherwise valid LEP message, not targeted to us
-        #else
-            // using exact matching
-            return 2; // discard otherwise valid LEP message, not targeted to us
-        #endif
-    }
+    // TODO: it may be faster to dump the json to an object list, and iterate through it to fill out the local vars? but will waste more memory
     
-    string source_script = llJsonGetValue(s, ["ss"]);
+    string source_region = llJsonGetValue(json, ["sr"]);
+    if (source_region == JSON_INVALID) source_region = llGetRegionName();
+
+    if (source_prim == "") source_prim = llJsonGetValue(json, ["sp"]);
+    if (source_prim == JSON_INVALID) source_prim = "";
+
+    string source_script = llJsonGetValue(json, ["ss"]);
 
     // filter out messages that don't match OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS list
     #if defined OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS
-        if (llListFindList(OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS, [source_script]) == -1) return 3; // discard otherwise valid LEP message, not sent from an allowed source script
+        if (llListFindList(OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS, [source_script]) == -1) return 5; // discard otherwise valid LEP message, not sent from an allowed source script
     #endif
 
-    string id = llJsonGetValue(s, ["id"]);
+    string id = llJsonGetValue(json, ["id"]);
     if (id == JSON_INVALID) id = "";
 
-    string domain = llJsonGetValue(s, ["d"]);
+    string domain = llJsonGetValue(json, ["d"]);
     if (domain == JSON_INVALID) domain = "";
 
-    string method = llJsonGetValue(s, ["m"]);
+    string method = llJsonGetValue(json, ["m"]);
+    if (llJsonValueType(json, ["i"]) != JSON_NUMBER) int = (integer)llJsonGetValue(json, ["i"]); // int was embedded, so use the embedded copy (probably forwarded from CLEP)
+    if (llJsonValueType(json, ["p"]) != JSON_INVALID) params = llJsonGetValue(json, ["p"]); // params was embedded, so use the embedded copy (probably forwarded from CLEP)
 
-    string result = llJsonGetValue(s, ["r"]);
-    integer error_code = (integer)llJsonGetValue(s, ["e", "c"]);
-    string error_message = llJsonGetValue(s, ["e", "m"]);
-    string error_data = llJsonGetValue(s, ["e", "d"]);
+    string result = llJsonGetValue(json, ["r"]);
+    integer error_code = (integer)llJsonGetValue(json, ["e", "c"]);
+    string error_message = llJsonGetValue(json, ["e", "m"]);
+    string error_data = llJsonGetValue(json, ["e", "d"]);
 
-    if (domain != OVERRIDE_ENLEP_DOMAIN) return 4; // discard message if it doesn't match the domain OVERRIDE_ENLEP_DOMAIN
+    if (source_link != -1 && domain != OVERRIDE_ENLEP_DOMAIN) return 6; // discard message if it doesn't match the domain OVERRIDE_ENLEP_DOMAIN and received via link_message
 
-    #if defined FEATURE_ENLEP_ENABLE_INBOUND_VERIFICATION
-        string algorithm = llJsonGetValue(s, ["s", "a"]);
-        string timestamp = llJsonGetValue(s, ["s", "t"]);
-        string source_region = llJsonGetValue(s, ["sr"]);
-        string source_prim = llJsonGetValue(s, ["sp"]);
+    string key_name;
 
-        #define _ENLEP_INBOUND_SIGNATURE_MESSAGE \
-            algorithm \
-            + timestamp \
-            + domain \
-            + source_script \
-            + target_script \
-            + source_prim \
-            + (string)int \
-            + method \
-            + params \
-            + id \
-            + result \
-            + (string)error_code \
-            + error_message \
-            + error_data \
-            + enString_If(enKey_IsNotNull(target_prim), target_prim + source_region + target_region, "")
-
-        if (llGetSubString(private_key, 0, 4) == "-----")
+    #if defined FEATURE_ENLEP_ENABLE_VERIFICATION
+        if (llJsonValueType(json, ["s"]) == JSON_OBJECT)
         {
-            if (!llVerifyRSA(
-                OVERRIDE_ENLEP_PUBLIC_KEY, 
-                _ENLEP_INBOUND_SIGNATURE_MESSAGE,
-                llJsonGetValue(s, ["s", "s"]),
-                algorithm)) return 5;
-        }
-        else
-        {
-            if (llHMAC(
-                OVERRIDE_ENLEP_PRIVATE_KEY, 
-                _ENLEP_INBOUND_SIGNATURE_MESSAGE,
-                algorithm) != llJsonGetValue(s, ["s", "s"])) return 6;
+            string algorithm = llJsonGetValue(json, ["s", "a"]);
+            string timestamp = llJsonGetValue(json, ["s", "t"]);
+
+            if (llAbs(enDate_TimestampDiffToSeconds(timestamp, llGetTimestamp())) < OVERRIDE_ENLEP_SIGNATURE_EXPIRY)
+            {
+                #define _ENLEP_INBOUND_SIGNATURE_MESSAGE \
+                    algorithm \
+                    + timestamp \
+                    + domain \
+                    + source_script \
+                    + target_script \
+                    + source_prim \
+                    + (string)int \
+                    + method \
+                    + params \
+                    + id \
+                    + enString_If(result == JSON_INVALID, "", result) \
+                    + (string)error_code \
+                    + enString_If(error_message == JSON_INVALID, "", error_message) \
+                    + enString_If(error_data == JSON_INVALID, "", error_data) \
+                    + enString_If(source_link == -1, (string)llGetKey() + source_region + target_region, "")
+
+                // iterate through all known keys until we find one that works
+                integer valid;
+                integer index;
+                integer max = llGetListLength(_ENLEP_KEYS) / 2;
+                string use_key;
+                do
+                {
+                    use_key = llList2String(_ENLEP_KEYS, index * 2 + 1);
+                    if (use_key != "")
+                    {
+                        // only attempt llVerifyRSA() if it looks like we're using an RSA public key, since it's slow
+                        string hmac = llJsonGetValue(json, ["s", "h"]);
+                        if (hmac == JSON_INVALID) valid = llVerifyRSA(use_key, _ENLEP_INBOUND_SIGNATURE_MESSAGE, llJsonGetValue(json, ["s", "s"]), algorithm);
+                        else valid = (llHMAC(use_key, _ENLEP_INBOUND_SIGNATURE_MESSAGE, algorithm) == hmac);
+                    }
+                }
+                while (!valid && ++index < max);
+
+                if (valid) key_name = llList2String(_ENLEP_KEYS, (index - 1) * 2);
+            }
         }
     #endif
 
+    if (source_link != -1)
+    { // we received this message via link_message, so process it via enlep_rpc_*()
+        if (result == JSON_INVALID)
+        {
+            if (error_message == JSON_INVALID)
+            { // request
+                #if defined EVENT_ENLEP_RPC_REQUEST && defined TRACE_EVENT_ENLEP_RPC_REQUEST
+                    enLog_TraceParams(
+                        "enlep_rpc_request",
+                        [
+                            "key_name",
+                            "source_link",
+                            "source_script",
+                            "target_script",
+                            "domain",
+                            "int",
+                            "method",
+                            "params",
+                            "id"
+                        ], [
+                            enString_Elem(key_name),
+                            source_link,
+                            enString_Elem(source_script),
+                            enString_Elem(target_script),
+                            enString_Elem(domain),
+                            int,
+                            enString_Elem(method),
+                            params,
+                            enString_Elem(id)
+                        ]
+                    );
+                #endif
+                #if defined EVENT_ENLEP_RPC_REQUEST
+                    enlep_rpc_request(
+                        key_name,
+                        source_link,
+                        source_script,
+                        target_script,
+                        domain,
+                        int,
+                        method,
+                        params,
+                        id
+                    );
+                #endif
+                return 7;
+            }
+
+            // error response
+            #if defined EVENT_ENLEP_RPC_ERROR && defined TRACE_EVENT_ENLEP_RPC_ERROR
+                enLog_TraceParams(
+                    "enlep_rpc_error",
+                    [
+                        "key_name",
+                        "source_link",
+                        "source_script",
+                        "target_script",
+                        "domain",
+                        "int",
+                        "method",
+                        "params",
+                        "id",
+                        "error_code",
+                        "error_message",
+                        "error_data"
+                    ], [
+                        enString_Elem(key_name),
+                        source_link,
+                        enString_Elem(source_script),
+                        enString_Elem(target_script),
+                        enString_Elem(domain),
+                        int,
+                        enString_Elem(method),
+                        params,
+                        enString_Elem(id),
+                        error_code,
+                        enString_Elem(error_message),
+                        error_data
+                    ]
+                );
+            #endif
+            #if defined EVENT_ENLEP_RPC_ERROR
+                enlep_rpc_error(
+                    key_name,
+                    source_link,
+                    source_script,
+                    target_script,
+                    domain,
+                    int,
+                    method,
+                    params,
+                    id,
+                    error_code,
+                    error_message,
+                    error_data
+                );
+            #endif
+            return 8;
+        }
+
+        // result response
+        #if defined EVENT_ENLEP_RPC_RESULT && defined TRACE_EVENT_ENLEP_RPC_RESULT
+            enLog_TraceParams(
+                "enlep_rpc_result",
+                [
+                    "key_name",
+                    "source_link",
+                    "source_script",
+                    "target_script",
+                    "domain",
+                    "int",
+                    "method",
+                    "params",
+                    "id",
+                    "result"
+                ], [
+                    enString_Elem(key_name),
+                    source_link,
+                    enString_Elem(source_script),
+                    enString_Elem(target_script),
+                    enString_Elem(domain),
+                    int,
+                    enString_Elem(method),
+                    params,
+                    enString_Elem(id),
+                    result
+                ]
+            );
+        #endif
+        #if defined EVENT_ENLEP_RPC_RESULT
+            enlep_rpc_result(
+                key_name,
+                source_link,
+                source_script,
+                target_script,
+                domain,
+                int,
+                method,
+                params,
+                id,
+                result
+            );
+        #endif
+        return 9;
+    }
+
+    // we received this message via listen, so process it via enclep_rpc_*()
     if (result == JSON_INVALID)
     {
         if (error_message == JSON_INVALID)
         { // request
-            #if defined EVENT_ENLEP_RPC_REQUEST && defined TRACE_EVENT_ENLEP_RPC_REQUEST
+            #if defined EVENT_ENCLEP_RPC_REQUEST && defined TRACE_EVENT_ENCLEP_RPC_REQUEST
                 enLog_TraceParams(
-                    "enlep_rpc_request",
+                    "enclep_rpc_request",
                     [
-                        "source_link",
+                        "key_name",
+                        "source_region",
+                        "source_prim",
                         "source_script",
                         "target_script",
                         "domain",
@@ -360,20 +628,24 @@ integer _enLEP_link_message(
                         "params",
                         "id"
                     ], [
-                        l, // source_link
+                        enString_Elem(key_name),
+                        enString_Elem(source_region),
+                        enPrim_Elem(source_prim),
                         enString_Elem(source_script),
                         enString_Elem(target_script),
-                        domain,
+                        enString_Elem(domain),
                         int,
-                        method,
+                        enString_Elem(method),
                         params,
-                        id
+                        enString_Elem(id)
                     ]
                 );
             #endif
-            #if defined EVENT_ENLEP_RPC_REQUEST
-                enlep_rpc_request(
-                    l, // source_link
+            #if defined EVENT_ENCLEP_RPC_REQUEST
+                enclep_rpc_request(
+                    key_name,
+                    source_region,
+                    source_prim,
                     source_script,
                     target_script,
                     domain,
@@ -383,15 +655,17 @@ integer _enLEP_link_message(
                     id
                 );
             #endif
-            return 7;
+            return 10;
         }
 
         // error response
-        #if defined EVENT_ENLEP_RPC_ERROR && defined TRACE_EVENT_ENLEP_RPC_ERROR
+        #if defined EVENT_ENCLEP_RPC_ERROR && defined TRACE_EVENT_ENCLEP_RPC_ERROR
             enLog_TraceParams(
-                "enlep_rpc_error",
+                "enclep_rpc_error",
                 [
-                    "source_link",
+                    "key_name",
+                    "source_region",
+                    "source_prim",
                     "source_script",
                     "target_script",
                     "domain",
@@ -403,23 +677,27 @@ integer _enLEP_link_message(
                     "error_message",
                     "error_data"
                 ], [
-                    l, // source_link
+                    enString_Elem(key_name),
+                    enString_Elem(source_region),
+                    enPrim_Elem(source_prim),
                     enString_Elem(source_script),
                     enString_Elem(target_script),
-                    domain,
+                    enString_Elem(domain),
                     int,
-                    method,
+                    enString_Elem(method),
                     params,
-                    id,
+                    enString_Elem(id),
                     error_code,
                     enString_Elem(error_message),
                     error_data
                 ]
             );
         #endif
-        #if defined EVENT_ENLEP_RPC_ERROR
-            enlep_rpc_error(
-                l, // source_link
+        #if defined EVENT_ENCLEP_RPC_ERROR
+            enclep_rpc_error(
+                key_name,
+                source_region,
+                source_prim,
                 source_script,
                 target_script,
                 domain,
@@ -432,15 +710,17 @@ integer _enLEP_link_message(
                 error_data
             );
         #endif
-        return 8;
+        return 11;
     }
 
     // result response
-    #if defined EVENT_ENLEP_RPC_RESULT && defined TRACE_EVENT_ENLEP_RPC_RESULT
+    #if defined EVENT_ENCLEP_RPC_RESULT && defined TRACE_EVENT_ENCLEP_RPC_RESULT
         enLog_TraceParams(
-            "enlep_rpc_result",
+            "enclep_rpc_result",
             [
-                "source_link",
+                "key_name",
+                "source_region",
+                "source_prim",
                 "source_script",
                 "target_script",
                 "domain",
@@ -450,21 +730,25 @@ integer _enLEP_link_message(
                 "id",
                 "result"
             ], [
-                l, // source_link
+                enString_Elem(key_name),
+                enString_Elem(source_region),
+                enPrim_Elem(source_prim),
                 enString_Elem(source_script),
                 enString_Elem(target_script),
-                domain,
+                enString_Elem(domain),
                 int,
-                method,
+                enString_Elem(method),
                 params,
-                id,
+                enString_Elem(id),
                 result
             ]
         );
     #endif
-    #if defined EVENT_ENLEP_RPC_RESULT
-        enlep_rpc_result(
-            l, // source_link
+    #if defined EVENT_ENCLEP_RPC_RESULT
+        enclep_rpc_result(
+            key_name,
+            source_region,
+            source_prim,
             source_script,
             target_script,
             domain,
@@ -475,5 +759,63 @@ integer _enLEP_link_message(
             result
         );
     #endif
-    return 9;
+    return 12;
+}
+
+/*!
+Enrolls a key.
+For HMAC keys, use the single shared key.
+For RSA key pairs, use the RSA PUBLIC key.
+@param string key_name The identifer for this key.
+@param string key_data The HMAC shared or RSA public key.
+@return integer TRUE for enrolled, FALSE if already enrolled (the key must be removed using enLEP_Unenroll() first)
+*/
+integer enLEP_EnrollKey(
+    string key_name,
+    string key_data
+)
+{
+    if (key_name == "" || key_data == "") return FALSE;
+    if (llListFindList(llList2ListSlice(_ENLEP_KEYS, 0, -1, 2, 0), [key_name]) != -1)
+    {
+        enLog_Warn("enLEP_EnrollKey attempted on existing key \"" + key_name + "\"");
+        return FALSE;
+    }
+    enLog_Trace("Enrolled key \"" + key_name + "\"");
+    _ENLEP_KEYS += [key_name, key_data];
+    return TRUE;
+}
+
+/*!
+Unenrolls a key.
+@param string key_name The identifer for this key.
+@return integer TRUE for unenrolled, FALSE if not currently enrolled.
+*/
+integer enLEP_UnenrollKey(
+    string key_name
+)
+{
+    integer index = llListFindList(llList2ListSlice(_ENLEP_KEYS, 0, -1, 2, 0), [key_name]);
+    if (index == -1) return FALSE;
+    _ENLEP_KEYS = llDeleteSubList(_ENLEP_KEYS, index * 2, (index + 1) * 2 - 1);
+    enLog_Trace("Unenrolled key \"" + key_name + "\"");
+    return TRUE;
+}
+
+/*!
+Gets an enrolled key.
+@param string key_name The identifer for this key.
+@return string HMAC shared or RSA public key. WARNING: It's possible to leak HMAC shared keys if you are exposing RSA public keys and also use HMAC!
+*/
+string enLEP_GetKey(
+    string key_name
+)
+{
+    integer index = llListFindList(llList2ListSlice(_ENLEP_KEYS, 0, -1, 2, 0), [key_name]);
+    if (index == -1)
+    {
+        enLog_Warn("Key \"" + key_name + "\" not enrolled");
+        return "";
+    }
+    return llList2String(_ENLEP_KEYS, index * 2 + 1);
 }

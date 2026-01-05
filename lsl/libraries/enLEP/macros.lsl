@@ -43,6 +43,10 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
     #define OVERRIDE_ENLEP_RSA_ALGORITHM "sha512"
 #endif
 
+#if !defined OVERRIDE_ENLEP_SIGNATURE_EXPIRY
+    #define OVERRIDE_ENLEP_SIGNATURE_EXPIRY 3
+#endif
+
 /*!
 Sends a request using the LEP-RPC protocol.
 @param integer target_link Target link number.
@@ -88,7 +92,7 @@ Responds with a result using the LEP-RPC protocol.
 #define   enLEP_RespondRPCResult(    target_link, target_script,                        int, method, params, id, result) \
                   _enLEP_SendRPC("", target_link, target_script, OVERRIDE_ENLEP_DOMAIN, int, method, params, id, result, 0, "", "")
 
-#define enLEP_RespondRPCResultSigned(private_key, target_link, target_script,                        int, method, params, id, result) \
+#define enLEP_RespondSignedRPCResult(private_key, target_link, target_script,                        int, method, params, id, result) \
                       _enLEP_SendRPC(private_key, target_link, target_script, OVERRIDE_ENLEP_DOMAIN, int, method, params, id, result, 0, "", "")
 
 /*!
@@ -105,5 +109,9 @@ Responds with an error using the LEP-RPC protocol.
 #define enLEP_RespondRPCError(    target_link, target_script,                        int, method, params, id,     error_code, error_message, error_data) \
                _enLEP_SendRPC("", target_link, target_script, OVERRIDE_ENLEP_DOMAIN, int, method, params, id, "", error_code, error_message, error_data)
 
-#define enLEP_RespondRPCErrorSigned(private_key, target_link, target_script,                        int, method, params, id,     error_code, error_message, error_data) \
+#define enLEP_RespondSignedRPCError(private_key, target_link, target_script,                        int, method, params, id,     error_code, error_message, error_data) \
                      _enLEP_SendRPC(private_key, target_link, target_script, OVERRIDE_ENLEP_DOMAIN, int, method, params, id, "", error_code, error_message, error_data)
+
+// stores public/private keys
+list _ENLEP_KEYS; // name, key
+#define _ENLEP_KEYS_STRIDE 2

@@ -62,7 +62,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
         #endif
 
         #if defined _HOOK_ENCLEP_LISTEN
-		    if (!_enCLEP_listen(channel, name, id, message)) return; // valid enCLEP message
+		    if (~_enCLEP_listen(channel, name, id, message) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
         #endif
         
 		#if defined _HOOK_EN_LISTEN
