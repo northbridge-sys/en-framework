@@ -133,7 +133,9 @@ string _enLEP_FormJsonRPC(
                 + error_data \
                 + enString_If(enKey_IsNotNull(target_prim), target_prim + llGetRegionName() + target_region, "")
 
-            //llOwnerSay(_ENLEP_OUTBOUND_SIGNATURE_MESSAGE);
+            #if defined TRACE_ENLEP_OUTBOUND_SIGNATURE_MESSAGE
+                enLog_Trace(_ENLEP_OUTBOUND_SIGNATURE_MESSAGE);
+            #endif
             
             if (llGetSubString(private_key, 0, 4) == "-----") addl += ",\"s\":{\"a\":\"" + OVERRIDE_ENLEP_RSA_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"r\":\"" + llSignRSA(private_key, OVERRIDE_ENLEP_RSA_ALGORITHM + _ENLEP_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENLEP_RSA_ALGORITHM) + "\"}"; // use RSA if we were passed an RSA private key
             else addl += ",\"s\":{\"a\":\"" + OVERRIDE_ENLEP_HMAC_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"h\":\"" + llHMAC(private_key, OVERRIDE_ENLEP_HMAC_ALGORITHM + _ENLEP_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENLEP_HMAC_ALGORITHM) + "\"}"; // use HMAC otherwise, since it accepts anything
@@ -282,7 +284,7 @@ integer _enLEP_ProcessRPC(
 
     if (llJsonValueType(json, []) != JSON_OBJECT) return -1; // LEP messages are always objects
 
-    string source_region = llGetRegionName();
+    string source_region;
     if (llJsonValueType(json, ["sr"]) != JSON_INVALID) source_region = llJsonGetValue(json, ["sr"]);
     string target_region;
     if (llJsonValueType(json, ["tr"]) != JSON_INVALID) target_region = llJsonGetValue(json, ["tr"]);
@@ -388,13 +390,15 @@ integer _enLEP_ProcessRPC(
                     + (string)error_code \
                     + enString_If(error_message == JSON_INVALID, "", error_message) \
                     + enString_If(error_data == JSON_INVALID, "", error_data) \
-                    + enString_If(source_link == -1, (string)llGetKey() + source_region + target_region, "")
+                    + enString_If(source_link == -1, target_prim + source_region + target_region, "")
 
                 string rsa = llJsonGetValue(json, ["s", "r"]);
                 string hmac = llJsonGetValue(json, ["s", "h"]);
 
-                //llOwnerSay(_ENLEP_INBOUND_SIGNATURE_MESSAGE);
-                
+                #if defined TRACE_ENLEP_INBOUND_SIGNATURE_MESSAGE
+                    enLog_Trace(_ENLEP_INBOUND_SIGNATURE_MESSAGE);
+                #endif
+
                 // iterate through all known keys until we find one that works
                 integer valid;
                 integer index;
