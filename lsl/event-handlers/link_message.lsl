@@ -51,15 +51,30 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
                     l,
                     i,
                     enString_Elem(s),
-                    enString_Elem(k)
+                    enString_Elem((string)k)
                 ]
             );
         #endif
 
         // process through hooks until one catches
 
+        integer e;
+
         #if defined _HOOK_ENLEP_LINK_MESSAGE
-            if (!_enLEP_link_message(l, i, s, k)) return; // if 0, valid LEP message
+            e = _enLEP_link_message(l, i, s, k);
+            // if positive, valid LEP message, but not necessarily processed
+            if (~e & CONST_INTEGER_NEGATIVE)
+        #endif
+        #if defined _HOOK_ENLEP_LINK_MESSAGE && !defined TRACE_EVENT_LINK_MESSAGE
+            return; // just return
+        #endif
+
+        #if defined _HOOK_ENLEP_LINK_MESSAGE && defined TRACE_EVENT_LINK_MESSAGE
+            { // print trace output and return
+                enLog_Trace("enLEP accepted link_message: " + (string)e);
+                return;
+            }
+            else enLog_Trace("enLEP rejected link_message: " + (string)e);
         #endif
 
 		#if defined _HOOK_EN_LINK_MESSAGE

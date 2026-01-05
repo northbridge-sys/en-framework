@@ -26,11 +26,11 @@ this is loosely based on JSON-RPC, optimized for LSL's tight memory limits and a
 string _enLEP_FormJsonRPC(
     integer flags, // internal flags
     string private_key,
-    string domain,
-    string target_region, // MISSING: only required if relay routing is requested
-    string target_prim, // MISSING: only required if relay routing is requested
     string source_script,
+    string target_region, // only required if relay routing is requested
+    string target_prim, // only required if relay routing is requested
     string target_script,
+    string domain,
     integer int,
     string method,
     string params,
@@ -72,15 +72,15 @@ string _enLEP_FormJsonRPC(
     No other params are allowed, and the whole spec is reserved for future expansion - all user values must be passed via existing params in the spec
     */
     string addl;
-    if (flag & FLAG_ENLEP_EMBED_INT) addl += "\"i\":" + (string)int; // embed int into JSON (used by CLEP)
-    if (d != "") addl += ",\"d\":\"" + enString_EscapeQuotes(domain) + "\""; // add domain
+    if (flags & FLAG_ENCLEP_EMBED_INT) addl += ",\"i\":" + (string)int; // embed int into JSON (used by CLEP)
+    if (domain != "") addl += ",\"d\":\"" + enString_EscapeQuotes(domain) + "\""; // add domain
     if (id != "") addl += ",\"id\":\"" + enString_EscapeQuotes(id) + "\""; // add id
-    if (llJsonValueType(params, []) != JSON_INVALID) addl += ",\"p\":" + params; // add params
+    if (flags & FLAG_ENCLEP_EMBED_PARAMS && llJsonValueType(params, []) != JSON_INVALID) addl += ",\"p\":" + params; // embed params into JSON (used by CLEP)
     if (llJsonValueType(result, []) != JSON_INVALID) addl += ",\"r\":" + result; // we are sending a response with a result, so add it
     else if (error_code || error_message != "" || error_data != "")
     { // we are sending a response with an error, so add it
         addl += ",\"e\":{\"c\":" + (string)error_code + ",\"m\":\"" + enString_EscapeQuotes(error_message) + "\"";
-        if (llJsonValueType(error_data, []) != JSON_INVALID) addl += "\"d\":" + error_data;
+        if (llJsonValueType(error_data, []) != JSON_INVALID) addl += ",\"d\":" + error_data;
         addl += "}";
     }
     // if no r/e, we are sending a request
@@ -152,6 +152,7 @@ string _enLEP_SendRPC(
     string private_key,
     integer target_link,
     string target_script,
+    string domain,
     integer int,
     string method,
     string params,
@@ -169,6 +170,7 @@ string _enLEP_SendRPC(
                 "private_key",
                 "target_link",
                 "target_script",
+                "domain",
                 "int",
                 "method",
                 "params",
@@ -182,6 +184,7 @@ string _enLEP_SendRPC(
                 enString_If(private_key == "", "", "(hidden)"),
                 target_link,
                 enString_Elem(target_script),
+                enString_Elem(domain),
                 int,
                 method,
                 params,
@@ -196,7 +199,7 @@ string _enLEP_SendRPC(
 
     if (!target_link) target_link = OVERRIDE_ENLEP_LINK_MESSAGE_SCOPE;
 
-    llMessageLinked(target_link, int, _enLEP_FormJsonRPC(0, private_key, "", "", "", llGetScriptName(), target_script, int, method, params, id, result, error_code, error_message, error_data), "");
+    llMessageLinked(target_link, int, _enLEP_FormJsonRPC(0, private_key, llGetScriptName(), "", "", target_script, domain, int, method, params, id, result, error_code, error_message, error_data), params);
     return id;
 }
 
@@ -206,9 +209,9 @@ Processes link_message events if EVENT_ENLEP_* is defined.
 */
 integer _enLEP_link_message(
     integer l,
-    integer i,
+    integer int,
     string s,
-    string k
+    string params
 )
 {
     #if defined TRACE_ENLEP_LINK_MESSAGE
@@ -219,9 +222,9 @@ integer _enLEP_link_message(
             "k"
         ], [
             l,
-            i,
+            int,
             enString_Elem(s),
-            enString_Elem(k)
+            enString_Elem(params)
         ]);
     #endif
 
@@ -253,21 +256,9 @@ integer _enLEP_link_message(
     }
     */
 
-    if (llJsonValueType(s, []) != JSON_OBJECT) return __LINE__; // LEP messages are always objects
+    if (llJsonValueType(s, []) != JSON_OBJECT) return -1; // LEP messages are always objects
 
-    string target_region = llJsonGetValue(s, ["tr"]);
-    string target_prim = llJsonGetValue(s, ["tp"]);
     string target_script = llJsonGetValue(s, ["ts"]);
-
-    #if !defined FEATURE_ENCLEP_ALLOW_ALL_TARGET_REGIONS
-        // filter out messages that are targeted to a specific other region
-        if (target_region != JSON_INVALID && target_region != "" && target_region != llGetRegionName()) return 0; // not targeted to this region
-    #endif
-
-    #if !defined FEATURE_ENCLEP_ALLOW_ALL_TARGET_PRIMS
-        // filter out messages that are targeted to a specific other prim
-        if (enKey_IsNotNull(target_prim) && target_prim != (string)llGetKey()) return 0; // not targeted to this prim
-    #endif
 
     /// generate allowed target_scripts list
     list allowed_targets = ["", llGetScriptName()]; // allow messages targeted to "" (all) and this script only
@@ -283,10 +274,10 @@ integer _enLEP_link_message(
     {
         #if defined FEATURE_ENLEP_ALLOW_FUZZY_TARGET_SCRIPT
             // using substring matching
-            if (llSubStringIndex(llGetScriptName(), target_script) == -1) return 0; // discard otherwise valid LEP message, not targeted to us
+            if (llSubStringIndex(llGetScriptName(), target_script) == -1) return 1; // discard otherwise valid LEP message, not targeted to us
         #else
             // using exact matching
-            return 0; // discard otherwise valid LEP message, not targeted to us
+            return 2; // discard otherwise valid LEP message, not targeted to us
         #endif
     }
     
@@ -294,24 +285,23 @@ integer _enLEP_link_message(
 
     // filter out messages that don't match OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS list
     #if defined OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS
-        if (llListFindList(OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS, [source_script]) == -1) return 0; // discard otherwise valid LEP message, not sent from an allowed source script
+        if (llListFindList(OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS, [source_script]) == -1) return 3; // discard otherwise valid LEP message, not sent from an allowed source script
     #endif
 
     string id = llJsonGetValue(s, ["id"]);
     if (id == JSON_INVALID) id = "";
 
     string domain = llJsonGetValue(s, ["d"]);
+    if (domain == JSON_INVALID) domain = "";
+
     string method = llJsonGetValue(s, ["m"]);
-    string params = llJsonGetValue(s, ["p"]);
 
     string result = llJsonGetValue(s, ["r"]);
     integer error_code = (integer)llJsonGetValue(s, ["e", "c"]);
     string error_message = llJsonGetValue(s, ["e", "m"]);
     string error_data = llJsonGetValue(s, ["e", "d"]);
 
-    #if defined FEATURE_ENLEP_DOMAIN
-        if (domain != FEATURE_ENLEP_DOMAIN) return 0; // discard message if it doesn't match the domain FEATURE_ENLEP_DOMAIN
-    #endif
+    if (domain != OVERRIDE_ENLEP_DOMAIN) return 4; // discard message if it doesn't match the domain OVERRIDE_ENLEP_DOMAIN
 
     #if defined FEATURE_ENLEP_ENABLE_INBOUND_VERIFICATION
         string algorithm = llJsonGetValue(s, ["s", "a"]);
@@ -326,7 +316,7 @@ integer _enLEP_link_message(
             + source_script \
             + target_script \
             + source_prim \
-            + (string)i \
+            + (string)int \
             + method \
             + params \
             + id \
@@ -342,18 +332,16 @@ integer _enLEP_link_message(
                 OVERRIDE_ENLEP_PUBLIC_KEY, 
                 _ENLEP_INBOUND_SIGNATURE_MESSAGE,
                 llJsonGetValue(s, ["s", "s"]),
-                algorithm)) return 0;
+                algorithm)) return 5;
         }
         else
         {
             if (llHMAC(
                 OVERRIDE_ENLEP_PRIVATE_KEY, 
                 _ENLEP_INBOUND_SIGNATURE_MESSAGE,
-                algorithm) != llJsonGetValue(s, ["s", "s"])) return 0;
+                algorithm) != llJsonGetValue(s, ["s", "s"])) return 6;
         }
     #endif
-
-    // TODO: copy inbound verification key registration code from enSign, since the above doesn't really work
 
     if (result == JSON_INVALID)
     {
@@ -366,6 +354,7 @@ integer _enLEP_link_message(
                         "source_link",
                         "source_script",
                         "target_script",
+                        "domain",
                         "int",
                         "method",
                         "params",
@@ -374,9 +363,10 @@ integer _enLEP_link_message(
                         l, // source_link
                         enString_Elem(source_script),
                         enString_Elem(target_script),
-                        i,
+                        domain,
+                        int,
                         method,
-                        k,
+                        params,
                         id
                     ]
                 );
@@ -386,13 +376,14 @@ integer _enLEP_link_message(
                     l, // source_link
                     source_script,
                     target_script,
-                    i,
+                    domain,
+                    int,
                     method,
-                    k,
+                    params,
                     id
                 );
             #endif
-            return 0;
+            return 7;
         }
 
         // error response
@@ -403,6 +394,7 @@ integer _enLEP_link_message(
                     "source_link",
                     "source_script",
                     "target_script",
+                    "domain",
                     "int",
                     "method",
                     "params",
@@ -414,9 +406,10 @@ integer _enLEP_link_message(
                     l, // source_link
                     enString_Elem(source_script),
                     enString_Elem(target_script),
-                    i,
+                    domain,
+                    int,
                     method,
-                    k,
+                    params,
                     id,
                     error_code,
                     enString_Elem(error_message),
@@ -429,16 +422,17 @@ integer _enLEP_link_message(
                 l, // source_link
                 source_script,
                 target_script,
-                i,
+                domain,
+                int,
                 method,
-                k,
+                params,
                 id,
                 error_code,
                 error_message,
                 error_data
             );
         #endif
-        return 0;
+        return 8;
     }
 
     // result response
@@ -449,6 +443,7 @@ integer _enLEP_link_message(
                 "source_link",
                 "source_script",
                 "target_script",
+                "domain",
                 "int",
                 "method",
                 "params",
@@ -458,9 +453,10 @@ integer _enLEP_link_message(
                 l, // source_link
                 enString_Elem(source_script),
                 enString_Elem(target_script),
-                i,
+                domain,
+                int,
                 method,
-                k,
+                params,
                 id,
                 result
             ]
@@ -471,12 +467,13 @@ integer _enLEP_link_message(
             l, // source_link
             source_script,
             target_script,
-            i,
+            domain,
+            int,
             method,
-            k,
+            params,
             id,
             result
         );
     #endif
-    return 0;
+    return 9;
 }

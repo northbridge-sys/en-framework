@@ -41,7 +41,7 @@ For the latest **development** release:
 Or, for the current **stable** release, or if you don't want to use git:
 - Create a directory called `northbridge-sys` in your LSL preprocessor include directory, if you haven't already.
 - Create a directory called `en-framework` in the `northbridge-sys` directory.
-- [Download](https://github.com/northbridge-sys/en-framework/archive/main.zip) and unpack the repository into the `en-framework` directory, so that `libraries.lsl` is located in `[preprocessor directory]/northbridge-sys/en-framework/libraries.lsl` (or with backslashes - \ - for Windows users). **Make sure you don't name the folder "en-framework-main", or the framework won't load correctly!**
+- [Download](https://github.com/northbridge-sys/en-framework/archive/main.zip) and unpack the repository into the `en-framework` directory, so that `README.md` is located in `[preprocessor directory]/northbridge-sys/en-framework/README.md` (or with backslashes - \ - for Windows users). **Make sure you don't name the folder "en-framework-main", or the framework won't load correctly!**
 
 Note that you'll need to repeat this process for each update; there is no auto-updater.
 
@@ -56,7 +56,7 @@ The following information is only an overview meant to describe how the En frame
 Include the framework libraries by placing the following line at the top of your script:
 
 ```
-#include "northbridge-sys/en-framework/libraries.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries.lsl"
 ```
 
 Then, in the script body, include the framework event handlers in each state
@@ -64,7 +64,7 @@ Then, in the script body, include the framework event handlers in each state
 ```
 default
 {
-    #include "northbridge-sys/en-framework/event-handlers.lsl"
+    #include "northbridge-sys/en-framework/lsl/event-handlers.lsl"
 }
 ```
 
@@ -74,7 +74,7 @@ To run your own code on an event, most events can be forwarded to user-defined f
 #define EVENT_EN_STATE_ENTRY
 #define EVENT_EN_ON_REZ
 
-#include "northbridge-sys/en-framework/libraries.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries.lsl"
 
 en_state_entry()
 {
@@ -91,7 +91,7 @@ en_on_rez( integer param )
 
 You can also #define additional options for library features and override default constants; see the documentation for details.
 
-No matter what, if you need to define any preprocessor values, make sure you do so *above* `#include "northbridge-sys/en-framework/libraries.lsl"`.
+No matter what, if you need to define any preprocessor values, make sure you do so *above* `#include "northbridge-sys/en-framework/lsl/libraries.lsl"`.
 
 ## Frequently Asked Questions
 
@@ -219,12 +219,13 @@ The script named "Target Script Name" in the same prim will call the `enlep_rpc_
 ```
 #define EVENT_ENLEP_RPC_REQUEST
 
-#include "northbridge-sys/en-framework/libraries.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries.lsl"
 
 enlep_rpc_request(
     integer source_link,
     string source_script,
     string target_script,
+    string domain,
     integer int,
     string method,
     string params,
@@ -233,9 +234,9 @@ enlep_rpc_request(
 {
     // you can process this request however you like, but here's an example:
 
-    if (method != "ping") return; // only respond if method is ["ping"]
+    if (method != "ping") return; // only respond if method is "ping"
 
-    enLog_Info("Got ping with ID " + id + " and params " + params);
+    enLog_Info("Got ping on domain \"" + domain + "\" with ID \"" + id + "\" and params: " + params);
 
     // respond to request
     enLEP_RespondRPCResult(
@@ -245,13 +246,13 @@ enlep_rpc_request(
         method, // return method
         params, // return params
         id, // return id
-        "{\"mid\":\"" + llGetTimestamp() + "\"}" // respond with timestamp
+        "{\"mid\":\"" + llGetTimestamp() + "\"}" // respond with result as timestamp
     );
 }
 
 default
 {
-    #include "northbridge-sys/en-framework/event-handlers.lsl"
+    #include "northbridge-sys/en-framework/lsl/event-handlers.lsl"
 }
 ```
 
@@ -261,7 +262,7 @@ Then, the source script will trigger `enlep_rpc_result()`, as long as `EVENT_ENL
 #define EVENT_EN_STATE_ENTRY
 #define EVENT_ENLEP_RPC_RESULT
 
-#include "northbridge-sys/en-framework/libraries.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries.lsl"
 
 en_state_entry()
 {
@@ -285,6 +286,7 @@ enlep_rpc_result(
     integer source_link,
     string source_script,
     string target_script,
+    string domain,
     integer int,
     string method,
     string params,
@@ -324,9 +326,8 @@ enlep_rpc_result(
 
 default
 {
-    #include "northbridge-sys/en-framework/event-handlers.lsl"
+    #include "northbridge-sys/en-framework/lsl/event-handlers.lsl"
 }
-
 ```
 
 All other En scripts will ignore both `link_message` events, returning them as quickly as possible.

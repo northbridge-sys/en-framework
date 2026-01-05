@@ -71,7 +71,7 @@ in event-handlers.lsl if you use it.)
 integer enCLEP_Listen(
     string domain,  // domain to listen to
     integer flags   // ENCLEP_LISTEN_* flags
-    )
+)
 {
     #if defined TRACE_ENCLEP
         enLog_TraceParams("enCLEP_Listen", ["domain", "flags"], [
@@ -111,7 +111,7 @@ enCLEP_Reset()
 //  NULL_KEY or "" can be passed as a prim to use llRegionSay automatically
 //  If FEATURE_ENCLEP_ENABLE_SHOUT is defined, a llRegionSayTo message will be sent via llShout to attempt to reach a prim across a nearby sim border
 _enCLEP_SendRaw( // llRegionSayTo with llRegionSay for NULL_KEY instead of silently failing
-    string prim,
+    string target_prim,
     integer channel,
     string message
     )
@@ -123,9 +123,9 @@ _enCLEP_SendRaw( // llRegionSayTo with llRegionSay for NULL_KEY instead of silen
             enString_Elem(message)
         ]);
     #endif
-        if (prim == "") prim = NULL_KEY;
-        if (prim == NULL_KEY) llRegionSay(channel, message); // RS if prim is not specified
-        else if (llGetObjectDetails(prim, [OBJECT_PHANTOM]) != []) llRegionSayTo(prim, channel, message); // RST if prim is in region
+        if (target_prim == "") target_prim = NULL_KEY;
+        if (target_prim == NULL_KEY) llRegionSay(channel, message); // RS if prim is not specified
+        else if (llGetObjectDetails(target_prim, [OBJECT_PHANTOM]) != []) llRegionSayTo(target_prim, channel, message); // RST if prim is in region
     #if defined FEATURE_ENCLEP_ENABLE_SHOUT
         else llShout(channel, message); // shout if prim is not in region and FEATURE_ENCLEP_ENABLE_SHOUT is defined
     #elif defined FEATURE_ENCLEP_ENABLE_SAY
@@ -140,10 +140,10 @@ CLEP-RPC, compatible with LEP-RPC.
 */
 string _enCLEP_SendRPC(
     string private_key,
-    string domain,
     string target_region,
     string target_prim,
     string target_script,
+    string domain,
     integer int,
     string method,
     string params,
@@ -159,10 +159,10 @@ string _enCLEP_SendRPC(
             "_enCLEP_SendRPC",
             [
                 "private_key",
-                "domain",
                 "target_region",
                 "target_prim",
                 "target_script",
+                "domain",
                 "int",
                 "method",
                 "params",
@@ -174,10 +174,10 @@ string _enCLEP_SendRPC(
             ],
             [
                 enString_If(private_key == "", "", "(hidden)"),
-                enString_Elem(domain),
                 enString_Elem(target_region),
                 enPrim_Elem(target_prim),
                 enString_Elem(target_script),
+                enString_Elem(domain),
                 int,
                 method,
                 params,
@@ -190,30 +190,27 @@ string _enCLEP_SendRPC(
         );
     #endif
 
-    string json = 
-        llJsonSetValue(
-            _enLEP_FormJsonRPC(
-                FLAG_ENLEP_EMBED_INT,
-                private_key,
-                domain,
-                target_region, // target region (if routing only)
-                target_prim, // target prim (if routing only)
-                llGetScriptName(),
-                target_script,
-                int,
-                method,
-                params,
-                id,
-                result,
-                error_code,
-                error_message,
-                error_data
-            ),
-            ["i"],
-            (string)int
-        );
-
-    _enCLEP_SendRaw(target_prim, enCLEP_Channel(clep_domain), json);
+    _enCLEP_SendRaw(
+        target_prim,
+        enCLEP_Channel(domain),
+        _enLEP_FormJsonRPC(
+            FLAG_ENCLEP_EMBED_INT | FLAG_ENCLEP_EMBED_PARAMS,
+            private_key,
+            llGetScriptName(),
+            target_region,
+            target_prim,
+            target_script,
+            domain,
+            int,
+            method,
+            params,
+            id,
+            result,
+            error_code,
+            error_message,
+            error_data
+        )
+    );
 
     return id;
 }
@@ -234,22 +231,64 @@ integer _enCLEP_listen(
 )
 {
     #if defined TRACE_ENCLEP_LISTEN
-        enLog_TraceParams("_enCLEP_listen", ["channel", "source_name", "source_prim", "s"], [
-            channel,
-            enString_Elem(source_name),
-            enString_Elem(source_prim),
-            enString_Elem(s)
-            ]);
+        enLog_TraceParams(
+            "_enCLEP_listen",
+            [
+                "channel",
+                "source_name",
+                "source_prim",
+                "s"
+            ], [
+                channel,
+                enString_Elem(source_name),
+                enString_Elem(source_prim),
+                enString_Elem(s)
+            ]
+        );
     #endif
 
+    /*
+    CLEP messages are:
+    {
+        "d":"(any domain string)",
+        "ss":llGetScriptName(),
+        "ts":"(name of target script)",
+        "sp":llGetKey(), <- only required if (1) "s" signature is used, OR (2) relayed routing is requested
+        "tp":"(UUID of target prim)", <- only required if relay routing is requested
+        "sr":llGetRegionName(), <- only required if relay routing is requested
+        "tr":"(name of region that target prim is in)", <- only required if relay routing is requested
+        "m":"any.method",
+        "p":(any JSON object), <- can be omitted if no params
+        "id":"(any string)", <- can be omitted if no response requested (broadcast)
+        "r":(any JSON object), <- only for responses that DO NOT return an error
+        "e":{ <- only for responses that DO return an error
+            "c":(integer error code),
+            "m":"(string error message)",
+            "d":(any JSON object) <- can be omitted if no error_data provided
+        },
+        "s":{ <- can be omitted if message unsigned
+            "a": llHMAC()/llSignRSA() algorithm,
+            "t": llGetTimestamp(),
+            "s": HMAC or RSA signature using private_key (see code for underlying "message")
+        },
+        "i":(any integer) <- omitted for LEP, reserved for CLEP (applied by _enCLEP_SendRPC()); note that int must still be passed to this function if signing; use FLAG_ENLEP_EMBED_INT
+    }
+    */
+
     if (llJsonValueType(s, []) != JSON_OBJECT) return __LINE__; // CLEP messages are always objects
-    
-    string source_script = llJsonGetValue(s, ["ss"]);
+
+    string target_region = llJsonGetValue(s, ["tr"]);
+    string target_prim = llJsonGetValue(s, ["tp"]);
     string target_script = llJsonGetValue(s, ["ts"]);
 
-    // filter out messages that don't match OVERRIDE_ENCLEP_ALLOWED_SOURCE_SCRIPTS list
-    #if defined OVERRIDE_ENCLEP_ALLOWED_SOURCE_SCRIPTS
-        if (llListFindList(OVERRIDE_ENCLEP_ALLOWED_SOURCE_SCRIPTS, [source_script]) == -1) return 0; // discard otherwise valid CLEP message, not sent from an allowed source script
+    #if !defined FEATURE_ENCLEP_ALLOW_ALL_TARGET_REGIONS
+        // filter out messages that are targeted to a specific other region
+        if (target_region != JSON_INVALID && target_region != "" && target_region != llGetRegionName()) return 0; // not targeted to this region
+    #endif
+
+    #if !defined FEATURE_ENCLEP_ALLOW_ALL_TARGET_PRIMS
+        // filter out messages that are targeted to a specific other prim
+        if (enKey_IsNotNull(target_prim) && target_prim != (string)llGetKey()) return 0; // not targeted to this prim
     #endif
 
     /// generate allowed target_scripts list
@@ -272,34 +311,92 @@ integer _enCLEP_listen(
             return 0; // discard otherwise valid CLEP message, not targeted to us
         #endif
     }
+    
+    string source_script = llJsonGetValue(s, ["ss"]);
 
-    if (llJsonGetValue(s, ["t"] != "RPC")) return __LINE__; // CLEP messages always have "t":"RPC", though other types may be added within CLEP spec eventually
+    // filter out messages that don't match OVERRIDE_ENCLEP_ALLOWED_SOURCE_SCRIPTS list
+    #if defined OVERRIDE_ENCLEP_ALLOWED_SOURCE_SCRIPTS
+        if (llListFindList(OVERRIDE_ENCLEP_ALLOWED_SOURCE_SCRIPTS, [source_script]) == -1) return 0; // discard otherwise valid CLEP message, not sent from an allowed source script
+    #endif
 
     string id = llJsonGetValue(s, ["id"]);
+    if (id == JSON_INVALID) id = "";
+
+    string domain = llJsonGetValue(s, ["d"]);
+    // check that we're listening to domain, avoids crosstalk
+    if (llListFindList(llList2ListSlice(_ENCLEP_DOMAINS, 0, -1, _ENCLEP_DOMAINS_STRIDE, 0), [domain]) == -1) return 0; // not listening to this domain
+
     integer int = (integer)llJsonGetValue(s, ["i"]);
-    list method = llParseStringKeepNulls(llJsonGetValue(s, ["m"]), ["."], []);
+    string method = llJsonGetValue(s, ["m"]);
     string params = llJsonGetValue(s, ["p"]);
     string result = llJsonGetValue(s, ["r"]);
+    integer error_code = (integer)llJsonGetValue(s, ["e", "c"]);
+    string error_message = llJsonGetValue(s, ["e", "m"]);
+    string error_data = llJsonGetValue(s, ["e", "d"]);
+
+    #if defined FEATURE_ENCLEP_ENABLE_INBOUND_VERIFICATION
+        string algorithm = llJsonGetValue(s, ["s", "a"]);
+        string timestamp = llJsonGetValue(s, ["s", "t"]);
+        string source_region = llJsonGetValue(s, ["sr"]);
+        string source_prim = llJsonGetValue(s, ["sp"]);
+
+        #define _ENCLEP_INBOUND_SIGNATURE_MESSAGE \
+            algorithm \
+            + timestamp \
+            + domain \
+            + source_script \
+            + target_script \
+            + source_prim \
+            + int \
+            + method \
+            + params \
+            + id \
+            + result \
+            + (string)error_code \
+            + error_message \
+            + error_data \
+            + enString_If(enKey_IsNotNull(target_prim), target_prim + source_region + target_region, "")
+
+        if (llGetSubString(private_key, 0, 4) == "-----")
+        {
+            if (!llVerifyRSA(
+                OVERRIDE_ENCLEP_PUBLIC_KEY, 
+                _ENCLEP_INBOUND_SIGNATURE_MESSAGE,
+                llJsonGetValue(s, ["s", "s"]),
+                algorithm)) return 0;
+        }
+        else
+        {
+            if (llHMAC(
+                OVERRIDE_ENCLEP_PRIVATE_KEY, 
+                _ENCLEP_INBOUND_SIGNATURE_MESSAGE,
+                algorithm) != llJsonGetValue(s, ["s", "s"])) return 0;
+        }
+    #endif
 
     if (result == JSON_INVALID)
     {
-        if (llJsonValueType(s, ["e"]) == JSON_INVALID)
+        if (error_message == JSON_INVALID)
         { // request
             #if defined EVENT_ENCLEP_RPC_REQUEST && defined TRACE_EVENT_ENCLEP_RPC_REQUEST
                 enLog_TraceParams(
                     "enclep_rpc_request",
                     [
+                        "source_region",
                         "source_prim",
                         "source_script",
                         "target_script",
+                        "domain",
                         "int",
                         "method",
                         "params",
                         "id"
                     ], [
-                        source_prim,
+                        enString_Elem(source_region),
+                        enPrim_Elem(source_prim),
                         enString_Elem(source_script),
                         enString_Elem(target_script),
+                        domain,
                         int,
                         method,
                         params,
@@ -309,9 +406,11 @@ integer _enCLEP_listen(
             #endif
             #if defined EVENT_ENCLEP_RPC_REQUEST
                 enclep_rpc_request(
+                    source_region,
                     source_prim,
                     source_script,
                     target_script,
+                    domain,
                     int,
                     method,
                     params,
@@ -322,16 +421,15 @@ integer _enCLEP_listen(
         }
 
         // error response
-        integer error_code = (integer)llJsonGetValue(s, ["e", "c"]);
-        string error_message = llJsonGetValue(s, ["e", "m"]);
-        string error_data = llJsonGetValue(s, ["e", "d"]);
         #if defined EVENT_ENCLEP_RPC_ERROR && defined TRACE_EVENT_ENCLEP_RPC_ERROR
             enLog_TraceParams(
                 "enclep_rpc_error",
                 [
+                    "source_region",
                     "source_prim",
                     "source_script",
                     "target_script",
+                    "domain",
                     "int",
                     "method",
                     "params",
@@ -340,9 +438,11 @@ integer _enCLEP_listen(
                     "error_message",
                     "error_data"
                 ], [
-                    source_prim,
+                    enString_Elem(source_region),
+                    enPrim_Elem(source_prim),
                     enString_Elem(source_script),
                     enString_Elem(target_script),
+                    domain,
                     int,
                     method,
                     params,
@@ -355,9 +455,11 @@ integer _enCLEP_listen(
         #endif
         #if defined EVENT_ENCLEP_RPC_ERROR
             enclep_rpc_error(
+                source_region,
                 source_prim,
                 source_script,
                 target_script,
+                domain,
                 int,
                 method,
                 params,
@@ -371,23 +473,26 @@ integer _enCLEP_listen(
     }
 
     // result response
-    integer result = llJsonGetValue(s, ["r"]);
     #if defined EVENT_ENCLEP_RPC_RESULT && defined TRACE_EVENT_ENCLEP_RPC_RESULT
         enLog_TraceParams(
             "enclep_rpc_result",
             [
+                "source_region",
                 "source_prim",
                 "source_script",
                 "target_script",
+                "domain",
                 "int",
                 "method",
                 "params",
                 "id",
                 "result"
             ], [
-                source_prim,
+                enString_Elem(source_region),
+                enPrim_Elem(source_prim),
                 enString_Elem(source_script),
                 enString_Elem(target_script),
+                domain,
                 int,
                 method,
                 params,
@@ -397,10 +502,12 @@ integer _enCLEP_listen(
         );
     #endif
     #if defined EVENT_ENCLEP_RPC_RESULT
-        enlep_rpc_result(
+        enclep_rpc_result(
+            source_region,
             source_prim,
             source_script,
             target_script,
+            domain,
             int,
             method,
             params,
