@@ -41,8 +41,15 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
     #define TRACE_ENLOG
 #endif
 
-#define enLog_TraceMemory() \
-    enLog_Trace("Memory: " + (string)llGetUsedMemory() + " used, " + (string)llGetSPMaxMemory() + " max, " + (string)llGetMemoryLimit() + " limit, " + (string)llGetFreeMemory() + " free")
+#define _enLog_Memory() "Memory: " + (string)llGetUsedMemory() + " used, " + (string)llGetSPMaxMemory() + " max, " + (string)llGetMemoryLimit() + " limit, " + (string)llGetFreeMemory() + " free"
+
+#define enLog_PrintMemory() enLog_To(0, __LINE__, "", _enLog_Memory())
+#define enLog_FatalMemory() enLog_To(1, __LINE__, "", _enLog_Memory())
+#define enLog_ErrorMemory() enLog_To(2, __LINE__, "", _enLog_Memory())
+#define enLog_WarnMemory()  enLog_To(3, __LINE__, "", _enLog_Memory())
+#define enLog_InfoMemory()  enLog_To(4, __LINE__, "", _enLog_Memory())
+#define enLog_DebugMemory() enLog_To(5, __LINE__, "", _enLog_Memory())
+#define enLog_TraceMemory() enLog_To(6, __LINE__, "", _enLog_Memory())
 
 #define enLog_Print(message) enLog_To(0, __LINE__, "", message)
 #define enLog_Fatal(message) enLog_To(1, __LINE__, "", message)
