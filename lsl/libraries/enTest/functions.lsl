@@ -148,14 +148,16 @@ enTest_BenchmarkResults() \
 {
     float seconds = enDatetime_TimestampDiffToSecondsPrecise(_ENTEST_BENCHMARK_START_TIMESTAMP, _ENTEST_BENCHMARK_END_TIMESTAMP);
 
+    integer mb_change = _ENTEST_BENCHMARK_END_MEMORY_USED - _ENTEST_BENCHMARK_START_MEMORY_USED;
+
     enLog_Print("== enTest Benchmark Results =="
         + "\nCycle time: " + (string)_ENTEST_BENCHMARK_TIME_MIN + " s min, " + (string)_ENTEST_BENCHMARK_TIME_AVG + " s avg, " + (string)_ENTEST_BENCHMARK_TIME_MAX + " s max"
-        + "\nMemory used: " + (string)_ENTEST_BENCHMARK_START_MEMORY_USED + " B start, " + (string)_ENTEST_BENCHMARK_END_MEMORY_USED + " B end"
+        + "\nMemory used: " + (string)_ENTEST_BENCHMARK_START_MEMORY_USED + " B start, " + (string)_ENTEST_BENCHMARK_END_MEMORY_USED + " B end, " + enString_If(mb_change >= 0, "+", "") + (string)mb_change + " B change"
         + "\nScripts run: " + (string)_ENTEST_BENCHMARK_SR_MIN + "% min, " + (string)_ENTEST_BENCHMARK_SR_AVG + "% avg, " + (string)_ENTEST_BENCHMARK_SR_MAX + "% max"
         + "\nTime dilation: " + (string)_ENTEST_BENCHMARK_TD_MIN + " min, " + (string)_ENTEST_BENCHMARK_TD_AVG + " avg, " + (string)_ENTEST_BENCHMARK_TD_MAX + " max"
         + "\nCycles completed: " + (string)(_ENTEST_BENCHMARK_CYCLES - _ENTEST_BENCHMARK_CYCLES_EXCLUDED) + " included, " + (string)_ENTEST_BENCHMARK_CYCLES_EXCLUDED + " excluded"
         + "\nllGetTimestamp(): " + (string)_ENTEST_BENCHMARK_START_TIMESTAMP + " start, " + (string)_ENTEST_BENCHMARK_END_TIMESTAMP + " end"
-        + "\nTotal time: " + (string)(seconds - _ENTEST_BENCHMARK_OVERHEAD_TIME) + " s running, " + (string)_ENTEST_BENCHMARK_OVERHEAD_TIME + " s overhead"
+        + "\nTotal time: " + (string)(seconds - _ENTEST_BENCHMARK_OVERHEAD_TIME) + " s running, " + (string)_ENTEST_BENCHMARK_OVERHEAD_TIME + " s overhead/paused"
         + "\nllGetRegionName(): " + llGetRegionName()
         + "\nllGetEnv(\"sim_channel\"): " + llGetEnv("sim_channel")
         + "\nllGetEnv(\"sim_version\"): " + llGetEnv("sim_version")
