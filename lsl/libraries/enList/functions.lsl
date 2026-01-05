@@ -339,13 +339,13 @@ Used when you have a mixed or string list that needs to be entirely integers.
 @return list List converted to integers.
 */
 list enList_AllToInteger(
-    list l
+    list input
 )
 {
     integer i;
-    integer j = llGetListLength(l);
+    integer l = llGetListLength(input);
     list r;
-    for (i = 0; i < j; i++)
-        r += [(integer)llList2String(l, j)];
+    for (i = 0; i < l; i++)
+        r += [(integer)llList2String(input, i)];
     return r;
 }
