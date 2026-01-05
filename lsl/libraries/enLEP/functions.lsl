@@ -133,7 +133,9 @@ string _enLEP_FormJsonRPC(
                 + error_data \
                 + enString_If(enKey_IsNotNull(target_prim), target_prim + llGetRegionName() + target_region, "")
 
-            if (llGetSubString(private_key, 0, 4) == "-----") addl += ",\"s\":{\"a\":\"" + OVERRIDE_ENLEP_RSA_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"s\":\"" + llSignRSA(private_key, OVERRIDE_ENLEP_RSA_ALGORITHM + _ENLEP_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENLEP_RSA_ALGORITHM) + "\"}"; // use RSA if we were passed an RSA private key
+            //llOwnerSay(_ENLEP_OUTBOUND_SIGNATURE_MESSAGE);
+            
+            if (llGetSubString(private_key, 0, 4) == "-----") addl += ",\"s\":{\"a\":\"" + OVERRIDE_ENLEP_RSA_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"r\":\"" + llSignRSA(private_key, OVERRIDE_ENLEP_RSA_ALGORITHM + _ENLEP_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENLEP_RSA_ALGORITHM) + "\"}"; // use RSA if we were passed an RSA private key
             else addl += ",\"s\":{\"a\":\"" + OVERRIDE_ENLEP_HMAC_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"h\":\"" + llHMAC(private_key, OVERRIDE_ENLEP_HMAC_ALGORITHM + _ENLEP_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENLEP_HMAC_ALGORITHM) + "\"}"; // use HMAC otherwise, since it accepts anything
         }
     #endif
@@ -280,66 +282,12 @@ integer _enLEP_ProcessRPC(
 
     if (llJsonValueType(json, []) != JSON_OBJECT) return -1; // LEP messages are always objects
 
-    #if defined FEATURE_ENLEP_EXPERIMENTAL_PARSING
-        string domain;
-        string source_script;
-        string target_script;
-        string target_prim;
-        string source_region;
-        string target_region;
-        integer int;
-        string method;
-        string params;
-        string id;
-        string result;
-        integer error_code;
-        string error_message;
-        string error_data;
-        string algorithm;
-        string timestamp;
-        string signature;
-        string hash;
+    string source_region = llGetRegionName();
+    if (llJsonValueType(json, ["sr"]) != JSON_INVALID) source_region = llJsonGetValue(json, ["sr"]);
+    string target_region;
+    if (llJsonValueType(json, ["tr"]) != JSON_INVALID) target_region = llJsonGetValue(json, ["tr"]);
 
-        /*
-        uses experimental llJson2List parser for performance
-        */
-        list parsed = llJson2List(json);
-        integer i;
-        integer l = llGetListLength(parsed) / 2;
-        for (i = 0; i < l; i++)
-        {
-            string name = llList2String(parsed, i * 2);
-            string data = llList2String(parsed, i * 2 + 1);
-            if (name == "d") domain = data;
-            else if (name == "ss") source_script = data;
-            else if (name == "ts") target_script = data;
-            else if (name == "sp") source_prim = data;
-            else if (name == "tp") target_prim = data;
-            else if (name == "sr") source_region = data;
-            else if (name == "tr") target_region = data;
-            else if (name == "i") int = (integer)data;
-            else if (name == "m") method = data;
-            else if (name == "p") params = data;
-            else if (name == "id") id = data;
-            else if (name == "r") result = data;
-            else if (name == "e")
-            {
-                error_code = (integer)llJsonGetValue(data, ["c"]);
-                error_message = llJsonGetValue(data, ["m"]);
-                if (llJsonValueType(data, ["d"]) != JSON_INVALID) error_data = llJsonGetValue(data, ["d"]);
-            }
-            else if (name == "s")
-            {
-                algorithm = llJsonGetValue(data, ["a"]);
-                timestamp = llJsonGetValue(data, ["t"]);
-                signature = llJsonGetValue(data, ["s"]);
-                hash = llJsonGetValue(data, ["h"]);
-            }
-        }
-    #endif
-
-    string target_region = llJsonGetValue(json, ["tr"]);
-    if (target_region == JSON_INVALID) target_region = "";
+    // filter out messages that are targeted to other regions
     #if !defined FEATURE_ENLEP_ALLOW_ALL_TARGET_REGIONS
         if (target_region != "")
         {
@@ -347,10 +295,11 @@ integer _enLEP_ProcessRPC(
         }
     #endif
 
-    #if !defined FEATURE_ENLEP_EXPERIMENTAL_PARSING
-        string target_prim = llJsonGetValue(json, ["tp"]);
-        if (target_prim == JSON_INVALID) target_prim = "";
-    #endif
+    if (llJsonValueType(json, ["sp"]) != JSON_INVALID) source_prim = llJsonGetValue(json, ["sp"]);
+    string target_prim;
+    if (llJsonValueType(json, ["tp"]) != JSON_INVALID) target_prim = llJsonGetValue(json, ["tp"]);
+
+    // filter out messages that are targeted to other prims
     #if !defined FEATURE_ENLEP_ALLOW_ALL_TARGET_PRIMS
         if (target_prim != "")
         {
@@ -358,7 +307,14 @@ integer _enLEP_ProcessRPC(
         }
     #endif
 
+    string source_script = llJsonGetValue(json, ["ss"]);
     string target_script = llJsonGetValue(json, ["ts"]);
+
+    // filter out messages that are targeted to other scripts
+    #if defined OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS
+        if (llListFindList(OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS, [source_script]) == -1) return 3; // discard otherwise valid LEP message, not sent from an allowed source script
+    #endif
+
     list allowed_targets = ["", llGetScriptName()]; // allow messages targeted to "" (all) and this script only
     #if defined OVERRIDE_ENLEP_ALLOWED_TARGET_SCRIPTS
         allowed_targets += OVERRIDE_ENLEP_ALLOWED_TARGET_SCRIPTS; // allow messages targeted to OVERRIDE_ENLEP_ALLOWED_TARGET_SCRIPTS list as well
@@ -370,45 +326,40 @@ integer _enLEP_ProcessRPC(
     #endif
             #if !defined FEATURE_ENLEP_ALLOW_ALL_TARGET_SCRIPTS && defined FEATURE_ENLEP_ALLOW_FUZZY_TARGET_SCRIPT
                 // using substring matching
-                if (llSubStringIndex(llGetScriptName(), target_script) == -1) return 3; // discard otherwise valid LEP message, not targeted to us
+                if (llSubStringIndex(llGetScriptName(), target_script) == -1) return 4; // discard otherwise valid LEP message, not targeted to us
             #endif
             #if !defined FEATURE_ENLEP_ALLOW_ALL_TARGET_SCRIPTS && !defined FEATURE_ENLEP_ALLOW_FUZZY_TARGET_SCRIPT
                 // using exact matching
-                return 4; // discard otherwise valid LEP message, not targeted to us
+                return 5; // discard otherwise valid LEP message, not targeted to us
             #endif
     #if !defined FEATURE_ENLEP_ALLOW_ALL_TARGET_SCRIPTS
         }
     #endif
 
-    // TODO: it may be faster to dump the json to an object list, and iterate through it to fill out the local vars? but will waste more memory
-    
-    string source_region = llJsonGetValue(json, ["sr"]);
-    if (source_region == JSON_INVALID) source_region = llGetRegionName();
+    string domain;
+    if (llJsonValueType(json, ["d"]) != JSON_INVALID) domain = llJsonGetValue(json, ["d"]);
 
-    if (source_prim == "") source_prim = llJsonGetValue(json, ["sp"]);
-    if (source_prim == JSON_INVALID) source_prim = "";
-
-    string source_script = llJsonGetValue(json, ["ss"]);
-
-    // filter out messages that don't match OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS list
-    #if defined OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS
-        if (llListFindList(OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS, [source_script]) == -1) return 5; // discard otherwise valid LEP message, not sent from an allowed source script
-    #endif
-
-    string id = llJsonGetValue(json, ["id"]);
-    if (id == JSON_INVALID) id = "";
-
-    string domain = llJsonGetValue(json, ["d"]);
-    if (domain == JSON_INVALID) domain = "";
+    if (llJsonValueType(json, ["i"]) != JSON_INVALID) int = (integer)llJsonGetValue(json, ["i"]);
 
     string method = llJsonGetValue(json, ["m"]);
-    if (llJsonValueType(json, ["i"]) != JSON_NUMBER) int = (integer)llJsonGetValue(json, ["i"]); // int was embedded, so use the embedded copy (probably forwarded from CLEP)
-    if (llJsonValueType(json, ["p"]) != JSON_INVALID) params = llJsonGetValue(json, ["p"]); // params was embedded, so use the embedded copy (probably forwarded from CLEP)
 
-    string result = llJsonGetValue(json, ["r"]);
-    integer error_code = (integer)llJsonGetValue(json, ["e", "c"]);
-    string error_message = llJsonGetValue(json, ["e", "m"]);
-    string error_data = llJsonGetValue(json, ["e", "d"]);
+    if (llJsonValueType(json, ["p"]) != JSON_INVALID) params = llJsonGetValue(json, ["p"]);
+
+    string id;
+    if (llJsonValueType(json, ["id"]) != JSON_INVALID) id = llJsonGetValue(json, ["id"]);
+
+    string result = JSON_INVALID;
+    if (llJsonValueType(json, ["r"]) != JSON_INVALID) result = llJsonGetValue(json, ["r"]);
+
+    integer error_code;
+    string error_message = JSON_INVALID;
+    string error_data;
+    if (llJsonValueType(json, ["e"]) != JSON_INVALID)
+    {
+        error_code = (integer)llJsonGetValue(json, ["e", "c"]);
+        error_message = llJsonGetValue(json, ["e", "m"]);
+    }
+    if (llJsonValueType(json, ["e", "c"]) != JSON_INVALID) error_data = llJsonGetValue(json, ["e", "d"]);
 
     if (source_link != -1 && domain != OVERRIDE_ENLEP_DOMAIN) return 6; // discard message if it doesn't match the domain OVERRIDE_ENLEP_DOMAIN and received via link_message
 
@@ -439,6 +390,11 @@ integer _enLEP_ProcessRPC(
                     + enString_If(error_data == JSON_INVALID, "", error_data) \
                     + enString_If(source_link == -1, (string)llGetKey() + source_region + target_region, "")
 
+                string rsa = llJsonGetValue(json, ["s", "r"]);
+                string hmac = llJsonGetValue(json, ["s", "h"]);
+
+                //llOwnerSay(_ENLEP_INBOUND_SIGNATURE_MESSAGE);
+                
                 // iterate through all known keys until we find one that works
                 integer valid;
                 integer index;
@@ -450,9 +406,9 @@ integer _enLEP_ProcessRPC(
                     if (use_key != "")
                     {
                         // only attempt llVerifyRSA() if it looks like we're using an RSA public key, since it's slow
-                        string hmac = llJsonGetValue(json, ["s", "h"]);
-                        if (hmac == JSON_INVALID) valid = llVerifyRSA(use_key, _ENLEP_INBOUND_SIGNATURE_MESSAGE, llJsonGetValue(json, ["s", "s"]), algorithm);
-                        else valid = (llHMAC(use_key, _ENLEP_INBOUND_SIGNATURE_MESSAGE, algorithm) == hmac);
+                        //string hmac = llJsonGetValue(json, ["s", "h"]);
+                        if (rsa != JSON_INVALID) valid = llVerifyRSA(use_key, _ENLEP_INBOUND_SIGNATURE_MESSAGE, rsa, algorithm);
+                        if (hmac != JSON_INVALID) valid = (llHMAC(use_key, _ENLEP_INBOUND_SIGNATURE_MESSAGE, algorithm) == hmac);
                     }
                 }
                 while (!valid && ++index < max);
