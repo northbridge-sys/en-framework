@@ -22,29 +22,8 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// internal flags
-#define FLAG_ENLEP_TYPE_REQUEST 0x1
-#define FLAG_ENLEP_TYPE_RESPONSE 0x2
-#define FLAG_ENLEP_STATUS_ERROR 0x80000000
-
-#if !defined OVERRIDE_ENLEP_DOMAIN
-    #define OVERRIDE_ENLEP_DOMAIN ""
-#endif
-
 #ifndef OVERRIDE_ENLEP_LINK_MESSAGE_SCOPE
     #define OVERRIDE_ENLEP_LINK_MESSAGE_SCOPE LINK_THIS
-#endif
-
-#if !defined OVERRIDE_ENLEP_HMAC_ALGORITHM
-    #define OVERRIDE_ENLEP_HMAC_ALGORITHM "sha256"
-#endif
-
-#if !defined OVERRIDE_ENLEP_RSA_ALGORITHM
-    #define OVERRIDE_ENLEP_RSA_ALGORITHM "sha512"
-#endif
-
-#if !defined OVERRIDE_ENLEP_SIGNATURE_EXPIRY
-    #define OVERRIDE_ENLEP_SIGNATURE_EXPIRY 3
 #endif
 
 /*!
@@ -56,11 +35,11 @@ Sends a request using the LEP-RPC protocol.
 @param string params Any JSON object.
 @param string id Any string. If "", will be omitted.
 */
-#define enLEP_RequestRPC(    target_link, target_script,                        int, method, params, id) \
-          _enLEP_SendRPC("", target_link, target_script, OVERRIDE_ENLEP_DOMAIN, int, method, params, id, "", 0, "", "")
+#define enLEP_RPCRequest(    target_link, target_script,                        int, method, params, id) \
+          _enLEP_RPCSend("", target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, "", 0, "", "")
 
-#define enLEP_RequestSignedRPC(private_key, target_link, target_script,                        int, method, params, id) \
-                _enLEP_SendRPC(private_key, target_link, target_script, OVERRIDE_ENLEP_DOMAIN, int, method, params, id, "", 0, "", "")
+#define enLEP_RPCRequestSigned(             key_name,  target_link, target_script,                        int, method, params, id) \
+                _enLEP_RPCSend(enRPC_GetKey(key_name), target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, "", 0, "", "")
 
 /*!
 Responds using the LEP-RPC protocol.
@@ -74,11 +53,11 @@ Responds using the LEP-RPC protocol.
 @param string error_message ERROR RESPONSES ONLY: Any string.
 @param string error_data ERROR RESPONSES ONLY: Any JSON object.
 */
-#define _enLEP_RespondRPC(    target_link, target_script,                        int, method, params, id, result, error_code, error_message, error_data) \
-           _enLEP_SendRPC("", target_link, target_script, OVERRIDE_ENLEP_DOMAIN, int, method, params, id, result, error_code, error_message, error_data)
+#define _enLEP_RPCResponse(    target_link, target_script,                        int, method, params, id, result, error_code, error_message, error_data) \
+            _enLEP_RPCSend("", target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, result, error_code, error_message, error_data)
 
-#define _enLEP_RespondSignedRPC(private_key, target_link, target_script,                        int, method, params, id, result, error_code, error_message, error_data) \
-                 _enLEP_SendRPC(private_key, target_link, target_script, OVERRIDE_ENLEP_DOMAIN, int, method, params, id, result, error_code, error_message, error_data)
+#define _enLEP_RPCSignedResponse(             key_name,  target_link, target_script,                        int, method, params, id, result, error_code, error_message, error_data) \
+                  _enLEP_RPCSend(enRPC_GetKey(key_name), target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, result, error_code, error_message, error_data)
 
 /*!
 Responds with a result using the LEP-RPC protocol.
@@ -89,11 +68,11 @@ Responds with a result using the LEP-RPC protocol.
 @param string id ID sent in request.
 @param string result Any JSON object.
 */
-#define   enLEP_RespondRPCResult(    target_link, target_script,                        int, method, params, id, result) \
-                  _enLEP_SendRPC("", target_link, target_script, OVERRIDE_ENLEP_DOMAIN, int, method, params, id, result, 0, "", "")
+#define enLEP_RPCResult(    target_link, target_script,                        int, method, params, id, result) \
+         _enLEP_RPCSend("", target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, result, 0, "", "")
 
-#define enLEP_RespondSignedRPCResult(private_key, target_link, target_script,                        int, method, params, id, result) \
-                      _enLEP_SendRPC(private_key, target_link, target_script, OVERRIDE_ENLEP_DOMAIN, int, method, params, id, result, 0, "", "")
+#define enLEP_RPCSignedResult(             key_name,  target_link, target_script,                        int, method, params, id, result) \
+               _enLEP_RPCSend(enRPC_GetKey(key_name), target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, result, 0, "", "")
 
 /*!
 Responds with an error using the LEP-RPC protocol.
@@ -106,12 +85,8 @@ Responds with an error using the LEP-RPC protocol.
 @param string error_message Any string.
 @param string error_data Any JSON object.
 */
-#define enLEP_RespondRPCError(    target_link, target_script,                        int, method, params, id,     error_code, error_message, error_data) \
-               _enLEP_SendRPC("", target_link, target_script, OVERRIDE_ENLEP_DOMAIN, int, method, params, id, "", error_code, error_message, error_data)
+#define enLEP_RPCError(    target_link, target_script,                        int, method, params, id,     error_code, error_message, error_data) \
+        _enLEP_RPCSend("", target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, "", error_code, error_message, error_data)
 
-#define enLEP_RespondSignedRPCError(private_key, target_link, target_script,                        int, method, params, id,     error_code, error_message, error_data) \
-                     _enLEP_SendRPC(private_key, target_link, target_script, OVERRIDE_ENLEP_DOMAIN, int, method, params, id, "", error_code, error_message, error_data)
-
-// stores public/private keys
-list _ENLEP_KEYS; // name, key
-#define _ENLEP_KEYS_STRIDE 2
+#define enLEP_RPCSignedError(             key_name,  target_link, target_script,                        int, method, params, id,     error_code, error_message, error_data) \
+              _enLEP_RPCSend(enRPC_GetKey(key_name), target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, "", error_code, error_message, error_data)

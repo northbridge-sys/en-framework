@@ -1,0 +1,48 @@
+/*
+En LSL Framework
+Copyright (C) 2024-25  Northbridge Business Systems
+https://docs.northbridgesys.com/en-framework
+
+╒══════════════════════════════════════════════════════════════════════════════╕
+│ LICENSE                                                                      │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+This script is free software: you can redistribute it and/or modify it under the
+terms of the GNU Lesser General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version.
+
+This script is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public License along
+with this script.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
+// internal flags
+#define FLAG_ENRPC_SOURCE_LEP 0x1
+#define FLAG_ENRPC_SOURCE_CLEP 0x2
+#define FLAG_ENRPC_SOURCE_SNEP 0x4
+#define FLAG_ENRPC_REQUEST 0x10
+#define FLAG_ENRPC_RESULT 0x20
+#define FLAG_ENRPC_ERROR 0x40
+
+#define FLAG_ENRPC_EMBED_INT 0x1
+#define FLAG_ENRPC_EMBED_PARAMS 0x2
+
+#if !defined OVERRIDE_ENRPC_DOMAIN
+    #define OVERRIDE_ENRPC_DOMAIN ""
+#endif
+
+#if !defined OVERRIDE_ENRPC_HMAC_ALGORITHM
+    #define OVERRIDE_ENRPC_HMAC_ALGORITHM "sha256"
+#endif
+
+#if !defined OVERRIDE_ENRPC_RSA_ALGORITHM
+    #define OVERRIDE_ENRPC_RSA_ALGORITHM "sha512"
+#endif
+
+#if !defined OVERRIDE_ENRPC_SIGNATURE_EXPIRY
+    #define OVERRIDE_ENRPC_SIGNATURE_EXPIRY 3
+#endif

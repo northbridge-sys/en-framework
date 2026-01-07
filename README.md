@@ -204,7 +204,7 @@ You can also send a copy of all logs as they are written to a separate object by
 En also implements LEP-RPC, LNX, and other tools for modular multi-script objects. For example, you can send a message to a specific script like so:
 
 ```
-string id = enLEP_RequestRPC(
+string id = enLEP_RPCRequest(
     LINK_THIS,
     "Target Script Name",
     0,
@@ -214,14 +214,14 @@ string id = enLEP_RequestRPC(
 );
 ```
 
-The script named "Target Script Name" in the same prim will call the `enlep_rpc_request()` callback function, as long as `EVENT_ENLEP_RPC_REQUEST` is defined:
+The script named "Target Script Name" in the same prim will call the `enrpc_request()` callback function, as long as `EVENT_ENRPC_REQUEST` is defined:
 
 ```
-#define EVENT_ENLEP_RPC_REQUEST
+#define EVENT_ENRPC_REQUEST
 
 #include "northbridge-sys/en-framework/lsl/libraries.lsl"
 
-enlep_rpc_request(
+enrpc_request(
     integer source_link,
     string source_script,
     string target_script,
@@ -239,7 +239,7 @@ enlep_rpc_request(
     enLog_Info("Got ping on domain \"" + domain + "\" with ID \"" + id + "\" and params: " + params);
 
     // respond to request
-    enLEP_RespondRPCResult(
+    enLEP_RPCResult(
         source_link, // you may send messages to any link or script, not just source_link and source_script
         source_script, // however, typically you'd only respond to the source_link and source_script that sent the request
         int, // return int
@@ -267,10 +267,10 @@ Then, the source script will trigger `enlep_rpc_result()`, as long as `EVENT_ENL
 en_state_entry()
 {
     /*
-    example of where the enLEP_RequestRPC() call could be made
-    note that enLEP_RequestRPC() returns the id - this can be stored for reference in enlep_rpc_*() if desired
+    example of where the enLEP_RPCRequest() call could be made
+    note that enLEP_RPCRequest() returns the id - this can be stored for reference in enlep_rpc_*() if desired
     */
-    string id = enLEP_RequestRPC(
+    string id = enLEP_RPCRequest(
         LINK_THIS,
         "Target Script Name",
         0,
@@ -299,8 +299,8 @@ enlep_rpc_result(
 
     this enlep_rpc_result() function won't get called unless all of the following are true:
     - this script receives a LEP-RPC result via link_message()
-    - the result is targeted to this script, "" (all scripts), or any script in the OVERRIDE_ENLEP_ALLOWED_TARGET_SCRIPTS list (see also FEATURE_ENLEP_ALLOW_FUZZY_TARGET_SCRIPT)
-    - if OVERRIDE_ENLEP_ALLOWED_SOURCE_SCRIPTS is defined, the response is from any script in that list (but note that source_script is self-reported, so this is NOT secure)
+    - the result is targeted to this script, "" (all scripts), or any script in the OVERRIDE_ENRPC_ALLOWED_TARGET_SCRIPTS list (see also FEATURE_ENRPC_ALLOW_FUZZY_TARGET_SCRIPT)
+    - if OVERRIDE_ENRPC_ALLOWED_SOURCE_SCRIPTS is defined, the response is from any script in that list (but note that source_script is self-reported, so this is NOT secure)
     - this script has defined EVENT_ENLEP_RPC_RESULT
     */
 

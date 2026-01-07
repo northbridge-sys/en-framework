@@ -117,8 +117,8 @@ _enCLEP_SendRaw( // llRegionSayTo with llRegionSay for NULL_KEY instead of silen
     )
 {
     #if defined TRACE_ENCLEP_SENDRAW
-        enLog_TraceParams("_enCLEP_SendRaw", ["prim", "channel", "message"], [
-            enString_Elem(prim),
+        enLog_TraceParams("_enCLEP_SendRaw", ["target_prim", "channel", "message"], [
+            enString_Elem(target_prim),
             channel,
             enString_Elem(message)
         ]);
@@ -138,7 +138,7 @@ _enCLEP_SendRaw( // llRegionSayTo with llRegionSay for NULL_KEY instead of silen
 /*
 CLEP-RPC, compatible with LEP-RPC.
 */
-string _enCLEP_SendRPC(
+string _enCLEP_RPCSend(
     string private_key,
     string target_region,
     string target_prim,
@@ -156,7 +156,7 @@ string _enCLEP_SendRPC(
 {
     #if defined TRACE_ENCLEP_SENDRPC
         enLog_TraceParams(
-            "_enCLEP_SendRPC",
+            "_enCLEP_RPCSend",
             [
                 "private_key",
                 "target_region",
@@ -193,8 +193,8 @@ string _enCLEP_SendRPC(
     _enCLEP_SendRaw(
         target_prim,
         enCLEP_Channel(domain),
-        _enLEP_FormJsonRPC(
-            FLAG_ENCLEP_EMBED_INT | FLAG_ENCLEP_EMBED_PARAMS,
+        _enRPC_Marshal(
+            FLAG_ENRPC_EMBED_INT | FLAG_ENRPC_EMBED_PARAMS,
             private_key,
             llGetScriptName(),
             target_region,
@@ -230,7 +230,7 @@ integer _enCLEP_listen(
     string s
 )
 {
-    integer e = _enLEP_ProcessRPC(
+    integer e = _enRPC_Unmarshal(
         source_prim, // source_prim
         -1, // source_link
         s, // json

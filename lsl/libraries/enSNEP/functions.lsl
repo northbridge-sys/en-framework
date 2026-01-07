@@ -1,6 +1,6 @@
 /*
 En LSL Framework
-Copyright (C) 2024-25  Northbridge Business Systems
+Copyright (C) 2024  Northbridge Business Systems
 https://docs.northbridgesys.com/en-framework
 
 ╒══════════════════════════════════════════════════════════════════════════════╕
@@ -20,13 +20,11 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-/*!
-Internal function. Sends a LEP-RPC message via llMessageLinked.
-Use enLEP_RPCRequest(), enLEP_RPCResult(), and enLEP_RPCError() instead.
-*/
-string _enLEP_RPCSend(
+_nbsSNEP_RPCSend(
+    string http_request_id,
     string private_key,
-    integer target_link,
+    string source_script,
+    string target_prim,
     string target_script,
     string domain,
     integer int,
@@ -39,12 +37,33 @@ string _enLEP_RPCSend(
     string error_data
 )
 {
-    #if defined TRACE_ENLEP_SENDRPC
+}
+
+string _enSNEP_RPCSend(
+    string private_key,
+    string target, // can be either a URL (for llHTTPRequest) or an http_request handle UUID (for llHTTPResponse)
+    string target_prim,
+    list http_parameters,
+    string target_script,
+    string domain,
+    integer int,
+    string method,
+    string params,
+    string id,
+    string result,
+    integer error_code,
+    string error_message,
+    string error_data
+)
+{
+    #if defined TRACE_ENSNEP_SENDRPC
         enLog_TraceParams(
-            "_enLEP_RPCSend",
+            "_enSNEP_RPCSend",
             [
                 "private_key",
-                "target_link",
+                "target",
+                "target_prim",
+                "http_parameters",
                 "target_script",
                 "domain",
                 "int",
@@ -58,7 +77,9 @@ string _enLEP_RPCSend(
             ],
             [
                 enString_If(private_key == "", "", "(hidden)"),
-                target_link,
+                enString_Elem(target),
+                enPrim_Elem(target_prim),
+                enList_Elem(http_parameters),
                 enString_Elem(target_script),
                 enString_Elem(domain),
                 int,
@@ -73,46 +94,52 @@ string _enLEP_RPCSend(
         );
     #endif
 
-    if (!target_link) target_link = OVERRIDE_ENLEP_LINK_MESSAGE_SCOPE;
-
-    llMessageLinked(target_link, int, _enRPC_Marshal(0, private_key, llGetScriptName(), "", "", target_script, domain, int, method, params, id, result, error_code, error_message, error_data), params);
-    return id;
-}
-
-/*!
-Processes link_message events if EVENT_ENLEP_* is defined.
-@param integer 
-*/
-integer _enLEP_link_message(
-    integer l,
-    integer i,
-    string s,
-    string k
-)
-{
-    integer e = _enRPC_Unmarshal(
-        "", // source_prim
-        l, // source_link
-        s, // json
-        i, // int (used only if not in json)
-        k // params (used only if not in json)
+    if (enKey_IsNotNull(target))
+    { // we are responding
+        llHTTPResponse(
+            target,
+            200,
+            _enRPC_Marshal(
+                FLAG_ENRPC_EMBED_INT | FLAG_ENRPC_EMBED_PARAMS, // internal flags
+                private_key,
+                source_script,
+                "", // target_region (not used for SNEP)
+                target_prim,
+                target_script,
+                domain,
+                int,
+                method,
+                params,
+                id,
+                result,
+                error_code,
+                error_message,
+                error_data
+            )
+        );
+        return target;
+    }
+    
+    // we are requesting
+    return llHTTPRequest(
+        target, 
+        http_parameters, 
+        _enRPC_Marshal(
+            FLAG_ENRPC_EMBED_INT | FLAG_ENRPC_EMBED_PARAMS,
+            private_key,
+            llGetScriptName(),
+            "", // target_region
+            target_prim, // SNEP leaves target_prim blank for direct messages, or can include if target_url is an external relay service
+            target_script,
+            domain,
+            int,
+            method,
+            params,
+            id,
+            result,
+            error_code,
+            error_message,
+            error_data
+        )
     );
-
-    #if defined TRACE_ENLEP_LINK_MESSAGE
-        enLog_TraceParamsResult("_enLEP_link_message", [
-            "l",
-            "i",
-            "s",
-            "k"
-        ], [
-            l,
-            i,
-            enString_Elem(s),
-            enString_Elem(k)
-        ],
-        (string)e
-    );
-    #endif
-
-    return e;
 }

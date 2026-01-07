@@ -54,7 +54,7 @@ enLog_To(
         if (enKey_IsPrimInRegion(prim))
         { // log via enCLEP to logtarget
             string domain = llDeleteSubString(t, 0, 35); // domain is remaining chars of logtarget
-            enCLEP_RequestRPC(
+            enCLEP_RPCRequest(
                 prim, // target_prim
                 "", // target_script
                 domain, // clep_domain
