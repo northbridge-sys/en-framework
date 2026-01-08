@@ -414,21 +414,3 @@ string enRPC_GetKey(
     }
     return llList2String(ENRPC_KEYS, index * 2 + 1);
 }
-
-/*!
-Gets an enrolled key.
-@param string key_name The identifer for this key.
-@return string HMAC shared or RSA public key. WARNING: It's possible to leak HMAC shared keys if you are exposing RSA public keys and also use HMAC!
-*/
-string enRPC_GetKey(
-    string key_name
-)
-{
-    integer index = llListFindList(llList2ListSlice(ENRPC_KEYS, 0, -1, 2, 0), [key_name]);
-    if (index == -1)
-    {
-        enLog_Warn("Key \"" + key_name + "\" not enrolled");
-        return "";
-    }
-    return llList2String(ENRPC_KEYS, index * 2 + 1);
-}
