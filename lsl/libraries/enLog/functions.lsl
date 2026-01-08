@@ -265,6 +265,15 @@ enLog_TraceParamsResult(
     enLog_ParamsResult(TRACE, function_name, param_names, param_values, result);
 }
 
+integer enLog_TraceReturn(
+    string function_name,
+    integer e
+)
+{
+    enLog_Trace((string)function_name + "() -> " + (string)e);
+    return e;
+}
+
 integer enLog_GetLoglevel()
 {
     string lsd = llLinksetDataRead( "loglevel" ); // any valid log level number, 0 (uses default), or negative (suppresses all output)

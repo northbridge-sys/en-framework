@@ -75,3 +75,6 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 
 #define enLog_SetLogtarget(target) \
     llLinksetDataWrite("logtarget", target)
+
+#define enLog_TraceReturnPassthrough(function_name, e, passthrough_e) \
+    enLog_TraceReturn(function_name, enInteger_PushNybble(e, passthrough_e))
