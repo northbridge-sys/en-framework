@@ -60,10 +60,9 @@ string enInteger_ElemBitfieldLabeled(
 // converts a 32-bit signed integer in its entirety to hex - for the reverse, use: integer i = (integer)( "0x" + h );
 string enInteger_ToHex(
     integer i, // integer
-    integer digits // number of hex digits
+    integer digits // MINIMUM number of hex digits
     )
 {
-    integer init_digits = digits;
     integer lsn; // least significant nybble
     string hex;
     do

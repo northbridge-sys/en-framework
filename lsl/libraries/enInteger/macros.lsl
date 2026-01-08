@@ -78,3 +78,11 @@ just a reminder that bitwise XOR exists, so you don't try doing any shenanigans 
 */
 #define enInteger_FlipBits(bitfield, position) \
     (bitfield ^ position)
+
+/*!
+Pushes four bits (one nybble, or one hex) onto the least significant end of an integer, shifting everything else left.
+This is mainly used for error code traces (each function appends its error out of 16 options, 0x0 to 0xF), with 0x0 being success.
+This allows the resulting caller to quickly check that the procedure was successful by checking (!e).
+*/
+#define enInteger_PushNybble(nybble, int) \
+    (int << 4) | nybble;
