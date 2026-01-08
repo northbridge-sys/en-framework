@@ -25,7 +25,7 @@ Internal function. Sends a LEP-RPC message via llMessageLinked.
 Use enLEP_RPCRequest(), enLEP_RPCResult(), and enLEP_RPCError() instead.
 */
 string _enLEP_RPCSend(
-    string private_key,
+    string key_name,
     integer target_link,
     string target_script,
     string domain,
@@ -43,7 +43,7 @@ string _enLEP_RPCSend(
         enLog_TraceParams(
             "_enLEP_RPCSend",
             [
-                "private_key",
+                "key_name",
                 "target_link",
                 "target_script",
                 "domain",
@@ -57,7 +57,7 @@ string _enLEP_RPCSend(
                 "error_data"
             ],
             [
-                enString_If(private_key == "", "", "(hidden)"),
+                enString_Elem(key_name),
                 target_link,
                 enString_Elem(target_script),
                 enString_Elem(domain),
@@ -75,7 +75,29 @@ string _enLEP_RPCSend(
 
     if (!target_link) target_link = OVERRIDE_ENLEP_LINK_MESSAGE_SCOPE;
 
-    llMessageLinked(target_link, int, _enRPC_Marshal(0, private_key, llGetScriptName(), "", "", target_script, domain, int, method, params, id, result, error_code, error_message, error_data), params);
+    llMessageLinked(
+        target_link,
+        int,
+        _enRPC_Marshal(
+            0, // flags
+            key_name,
+            llGetScriptName(),
+            "", // target_region
+            "", // target_prim
+            target_script,
+            domain,
+            int,
+            method,
+            params,
+            id,
+            result,
+            error_code,
+            error_message,
+            error_data
+        ),
+        params
+    );
+
     return id;
 }
 

@@ -20,27 +20,8 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-_nbsSNEP_RPCSend(
-    string http_request_id,
-    string private_key,
-    string source_script,
-    string target_prim,
-    string target_script,
-    string domain,
-    integer int,
-    string method,
-    string params,
-    string id,
-    string result,
-    integer error_code,
-    string error_message,
-    string error_data
-)
-{
-}
-
 string _enSNEP_RPCSend(
-    string private_key,
+    string key_name,
     string target, // can be either a URL (for llHTTPRequest) or an http_request handle UUID (for llHTTPResponse)
     string target_prim,
     list http_parameters,
@@ -60,7 +41,7 @@ string _enSNEP_RPCSend(
         enLog_TraceParams(
             "_enSNEP_RPCSend",
             [
-                "private_key",
+                "key_name",
                 "target",
                 "target_prim",
                 "http_parameters",
@@ -76,7 +57,7 @@ string _enSNEP_RPCSend(
                 "error_data"
             ],
             [
-                enString_If(private_key == "", "", "(hidden)"),
+                enString_Elem(key_name),
                 enString_Elem(target),
                 enPrim_Elem(target_prim),
                 enList_Elem(http_parameters),
@@ -101,7 +82,7 @@ string _enSNEP_RPCSend(
             200,
             _enRPC_Marshal(
                 FLAG_ENRPC_EMBED_INT | FLAG_ENRPC_EMBED_PARAMS, // internal flags
-                private_key,
+                key_name,
                 source_script,
                 "", // target_region (not used for SNEP)
                 target_prim,
@@ -126,7 +107,7 @@ string _enSNEP_RPCSend(
         http_parameters, 
         _enRPC_Marshal(
             FLAG_ENRPC_EMBED_INT | FLAG_ENRPC_EMBED_PARAMS,
-            private_key,
+            key_name,
             llGetScriptName(),
             "", // target_region
             target_prim, // SNEP leaves target_prim blank for direct messages, or can include if target_url is an external relay service

@@ -22,7 +22,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 
 string _enRPC_Marshal(
     integer flags, // internal flags
-    string private_key,
+    string key_name,
     string source_script,
     string target_region, // only required if relay routing is requested
     string target_prim, // only required if relay routing is requested
@@ -84,12 +84,14 @@ string _enRPC_Marshal(
     #if defined FEATURE_ENCLEP_ENABLE_ROUTING || defined FEATURE_ENRPC_ENABLE_SIGNING
         if (enKey_IsNotNull(target_prim)) // we are requesting routing, so add routing information
             addl += ",\"sp\":\"" + (string)llGetKey() + "\",\"tp\":\"" + target_prim + "\",\"sr\":\"" + enString_EscapeQuotes(llGetRegionName()) + "\",\"tr\":\"" + enString_EscapeQuotes(target_region) + "\"";
-        else if (private_key != "") // we are not requesting routing, but we are signing
+        else if (key_name != "") // we are not requesting routing, but we are signing
             addl += ",\"sp\":\"" + (string)llGetKey() + "\"";
     #endif
     
     #if defined FEATURE_ENRPC_ENABLE_SIGNING
         // signing is enabled - are we signing this message?
+        string private_key = enRPC_GetKey(key_name); // import private_key from ENRPC_KEYS
+
         if (private_key != "")
         {
             string timestamp = llGetTimestamp();
@@ -393,6 +395,24 @@ integer _enRPC_Unmarshal(
         );
     #endif
     return 0;
+}
+
+/*!
+Gets an enrolled key.
+@param string key_name The identifer for this key.
+@return string HMAC shared or RSA public key. WARNING: It's possible to leak HMAC shared keys if you are exposing RSA public keys and also use HMAC!
+*/
+string enRPC_GetKey(
+    string key_name
+)
+{
+    integer index = llListFindList(llList2ListSlice(ENRPC_KEYS, 0, -1, 2, 0), [key_name]);
+    if (index == -1)
+    {
+        enLog_Warn("Key \"" + key_name + "\" not enrolled");
+        return "";
+    }
+    return llList2String(ENRPC_KEYS, index * 2 + 1);
 }
 
 /*!

@@ -139,7 +139,7 @@ _enCLEP_SendRaw( // llRegionSayTo with llRegionSay for NULL_KEY instead of silen
 CLEP-RPC, compatible with LEP-RPC.
 */
 string _enCLEP_RPCSend(
-    string private_key,
+    string key_name,
     string target_region,
     string target_prim,
     string target_script,
@@ -158,7 +158,7 @@ string _enCLEP_RPCSend(
         enLog_TraceParams(
             "_enCLEP_RPCSend",
             [
-                "private_key",
+                "key_name",
                 "target_region",
                 "target_prim",
                 "target_script",
@@ -173,7 +173,7 @@ string _enCLEP_RPCSend(
                 "error_data"
             ],
             [
-                enString_If(private_key == "", "", "(hidden)"),
+                enString_Elem(key_name),
                 enString_Elem(target_region),
                 enPrim_Elem(target_prim),
                 enString_Elem(target_script),
@@ -195,7 +195,7 @@ string _enCLEP_RPCSend(
         enCLEP_Channel(domain),
         _enRPC_Marshal(
             FLAG_ENRPC_EMBED_INT | FLAG_ENRPC_EMBED_PARAMS,
-            private_key,
+            key_name,
             llGetScriptName(),
             target_region,
             target_prim,
