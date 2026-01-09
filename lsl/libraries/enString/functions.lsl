@@ -237,6 +237,15 @@ string enString_JsonAttempt(
     return val;
 }
 
+string enString_JsonTryValue(
+    string json,
+    list specifiers
+)
+{
+    if (llJsonValueType(json, specifiers) != JSON_INVALID) return llJsonGetValue(json, specifiers);
+    return "";
+}
+
 /*
 parses a string as a command by splitting elements by spaces, except between un-escaped " chars
 
