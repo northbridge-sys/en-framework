@@ -15,7 +15,7 @@ Options - macros that are optionally #define-d at the top of the script - are na
 - **EVENT_EN_EVENT_NAME** is a user-defined raw event handler option. When defined, En will pass raw *event_name* LSL events through to the matching lowercase function, such as *EVENT_EN_LISTEN* to *en_listen(...)* and *EVENT_EN_TIMER* to *en_timer(...)*.
 - **EVENT_ENLIBRARYNAME_EVENT_NAME** is a user-defined En event handler option, like **EVENT_EN_EVENT_NAME** but used by an En library instead of En itself. Some of these options also inject additional code to handle events; for example, defining *EVENT_ENRPC_REQUEST* will create a *link_message* event and process any inbound LEP messages, passing valid LEP-RPC requests to *enrpc_request*, and passing any non-LEP messages to *en_link_message* if *EVENT_EN_LINK_MESSAGE* is defined.
 - **FEATURE_ENLIBRARYNAME_OPTION_NAME** is a library feature option. When defined, En will enable or disable certain library features, such as *FEATURE_ENCLEP_ENABLE_SHOUT* and *FEATURE_ENTIMER_DISABLE_MULTIPLE*.
-- **OVERRIDE_TYPE_ENLIBRARYNAME_OPTION_NAME** is a library override option. When defined as a specific value, En's default configurable constants can be overridden on compile, such as *OVERRIDE_INTEGER_ENCLEP_RESERVE_LISTENS* and *OVERRIDE_FLOAT_ENTIMER_MINIMUM_INTERVAL*.
+- **OVERRIDE_TYPE_ENLIBRARYNAME_OPTION_NAME** is a library override option. When defined as a specific value, En's default configurable constants can be overridden on compile, such as *OVERRIDE_INTEGER_ENRPC_RESERVE_LISTENS* and *OVERRIDE_FLOAT_ENTIMER_MINIMUM_INTERVAL*.
 - **TRACE_EN** enables additional En trace logging at compile time.
 - **TRACE_ENLIBRARYNAME** enables additional En trace logging at compile time for a specific library.
 
@@ -25,7 +25,7 @@ Options must be #define-d before #include-ing `libraries.lsl`, which automatical
 
 Global variables and internal functions, as well as internal macro functions, are named and capitalized as follows:
 
-- **_ENLIBRARYNAME_GLOBAL_NAME** is an internal library global variable that the script should not access directly, such as *_ENCLEP_DOMAINS* and *_ENTIMER_QUEUE*.
+- **_ENLIBRARYNAME_GLOBAL_NAME** is an internal library global variable that the script should not access directly, such as *_ENRPC_CLEP* and *_ENTIMER_QUEUE*.
 - **_enLibraryName_FunctionName** is an internal library function or macro that the script should not call directly, such as *_enCLEP_MultiSayTo* and *_enLNX_BuildHead*.
 
 ## Functions and Inline Macros
@@ -43,7 +43,7 @@ Functions and inline macros (which are effectively called as functions) are name
 Additionally, some macros should not be #define-d but may be referenced in scripts:
 
 - **CONST_TYPE_NAME** is a constant that cannot be redefined, such as *CONST_FLOAT_PI_BY_FOUR* or *CONST_VECTOR_GREEN*.
-- **FLAG_ENLIBRARYNAME_FLAG_NAME** is a flag (integer or bitfield) that is used by an En library, such as *FLAG_ENCLEP_LISTEN_OWNERONLY* and *FLAG_ENTIMER_ONESHOT*.
+- **FLAG_ENLIBRARYNAME_FLAG_NAME** is a flag (integer or bitfield) that is used by an En library, such as *FLAG_ENRPC_LISTEN_OWNERONLY* and *FLAG_ENTIMER_ONESHOT*.
 - The seven default loglevels: **PRINT**, **FATAL**, **ERROR**, **WARN**, **INFO**, **DEBUG**, and **TRACE**.
 
 # Third-Party Usage

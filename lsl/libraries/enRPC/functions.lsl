@@ -31,6 +31,221 @@ enRPC_StageHTTPParameters(
     _ENRPC_HTTP_PARAMETERS = http_parameters;
 }
 
+integer _enRPC_link_message(
+    integer l,
+    integer i,
+    string s,
+    string k
+)
+{
+    integer e = _enRPC_Unmarshal(
+        "", // source_prim
+        l, // source_link
+        s, // json
+        i, // int (used only if not in json)
+        k // params (used only if not in json)
+    );
+
+    #if defined TRACE_ENRPC_LINK_MESSAGE
+        enLog_TraceParamsResult("_enRPC_link_message", [
+            "l",
+            "i",
+            "s",
+            "k"
+        ], [
+            l,
+            i,
+            enString_Elem(s),
+            enString_Elem(k)
+        ],
+        (string)e
+    );
+    #endif
+
+    return e;
+}
+
+/*
+Process incoming listen event to see if it is a CLEP message.
+If not, return a positive integer.
+If so, check that the message is acceptable (matches a listened-to domain, ownership checks, etc.)
+If the message is acceptable, route it appropriately (either to enLEP, or whatever other library or protocol) and return 0.
+If not, return 0 to signal a CLEP message even if it wasn't routable.
+*/
+integer _enRPC_listen(
+    integer channel,
+    string source_name,
+    string source_prim,
+    string s
+)
+{
+    integer e = _enRPC_Unmarshal(
+        source_prim, // source_prim
+        -1, // source_link
+        s, // json
+        0, // int (used only if not in json)
+        "" // params (used only if not in json)
+    );
+    
+    #if defined TRACE_ENCLEP_LISTEN
+        enLog_TraceParamsResult(
+            "_enRPC_listen",
+            [
+                "channel",
+                "source_name",
+                "source_prim",
+                "s"
+            ], [
+                channel,
+                enString_Elem(source_name),
+                enString_Elem(source_prim),
+                enString_Elem(s)
+            ],
+            (string)e
+        );
+    #endif
+
+    return e;
+}
+
+//  internal function that runs after key change to reset any listens based on previous UUID
+_enRPC_uuid_changed(
+    string last_uuid
+)
+{
+    _enRPC_UnListenAll();
+    // are we listening to a self-domain?
+    integer index = llListFindList(llList2ListSlice(_ENRPC_CLEP, 0, -1, _ENRPC_CLEP_STRIDE, 0), [last_uuid]);
+    // if we are, replace it
+    if (index != -1) _ENRPC_CLEP = llListReplaceList(_ENRPC_CLEP,
+        [(string)llGetKey()],
+        index * _ENRPC_CLEP_STRIDE,
+        index * _ENRPC_CLEP_STRIDE);
+    _enRPC_ListenAll();
+}
+
+/*
+enRPC_DialogListen opens a regular llListen on an enCLEP channel tied to this prim UUID and script name.
+This can be used in conjunction with enRPC_DialogChannel for a safe nearly-guaranteed-random channel for this script.
+*/
+enRPC_DialogListen()
+{
+    _enRPC_UnListenAll();
+    if (_ENRPC_DIALOG_LSN) llListenRemove(_ENRPC_DIALOG_LSN);
+    integer channel = enRPC_DialogChannel();
+    _ENRPC_DIALOG_LSN = llListen(channel, "", "", "");
+    enLog_Trace("Dialog listening on channel " + (string)channel + " handle " + (string)_ENRPC_DIALOG_LSN);
+    _enRPC_ListenAll();
+}
+
+/*
+Removes the listen created by enRPC_DialogListen.
+*/
+enRPC_DialogListenRemove()
+{
+    if (!_ENRPC_DIALOG_LSN) return;
+    _enRPC_UnListenAll();
+    llListenRemove(_ENRPC_DIALOG_LSN);
+    _ENRPC_DIALOG_LSN = 0;
+    _enRPC_ListenAll();
+}
+
+/*
+Initializes or updates a dynamically managed enCLEP listener.
+This is like llListen, but easier to use.
+
+enRPC_Listen(...) will return 0 and fail to add the listen if you attempt to
+add more than 65 listeners (the maximum allowed per script). If you call
+llListen separately, set the number of listens you want reserved for non-enCLEP\
+use by adding the following line:
+    #define OVERRIDE_INTEGER_ENRPC_RESERVE_LISTENS x
+where x is the number of listens you want to allocate for non-enCLEP use.
+
+Note: domains can be set as the local prim's UUID, in which case they will be
+automatically refreshed on key or link change. However, this ONLY works if the
+domain itself is just the UUID - no other data can be added.
+
+WARNING: If the local prim's UUID is used as the domain, you MUST use the
+state_entry, on_rez, and changed event handler include files, which will
+dynamically update the domain after a key change. (This is done automatically
+in event-handlers.lsl if you use it.)
+*/
+integer enRPC_Listen(
+    string domain,  // domain to listen to
+    integer flags   // ENCLEP_LISTEN_* flags
+)
+{
+    #if defined TRACE_ENCLEP
+        enLog_TraceParams("enRPC_Listen", ["domain", "flags"], [
+            enString_Elem(domain),
+            enInteger_ElemBitfield(flags)
+            ]);
+    #endif
+    _enRPC_UnListenAll();
+    integer index = llListFindList(_ENRPC_CLEP, [domain]);
+    if (index == -1 && flags & FLAG_ENRPC_LISTEN_REMOVE)
+    { // nothing to remove, so return error
+        _enRPC_ListenAll();
+        return __LINE__;
+    }
+    if (~index) _ENRPC_CLEP = llDeleteSubList(_ENRPC_CLEP, index, index + _ENRPC_CLEP_STRIDE - 1); // index == -1; delete existing domain enCLEP, so it can be cleanly appended to the end
+    if (llGetListLength(_ENRPC_CLEP) / _ENRPC_CLEP_STRIDE + OVERRIDE_INTEGER_ENRPC_RESERVE_LISTENS > 63)
+    { // too many listens (maximum 65, so if we are currently at 64 or more, fail)
+        _enRPC_ListenAll();
+        return __LINE__;
+    }
+    if (~flags & FLAG_ENRPC_LISTEN_REMOVE) _ENRPC_CLEP += [domain, flags, 0]; // add to _ENRPC_CLEP only if we aren't removing it
+    _enRPC_ListenAll();
+    return 0;
+}
+
+//  resets and removes all enCLEP listeners, for single-purpose scripts to not have to independently keep track of listen handles
+enRPC_ListenReset()
+{
+    #if defined TRACE_ENCLEP
+        enLog_TraceParams("enRPC_ListenReset", [], []);
+    #endif
+    _enRPC_UnListenAll();
+    _ENRPC_CLEP = [];
+}
+
+//  internal function that runs llListenRemove on everything in _ENRPC_CLEP
+_enRPC_UnListenAll()
+{
+    #if defined TRACE_ENCLEP
+        enLog_TraceParams("enCLEP_UnListenDomains", [], []);
+    #endif
+    integer i;
+    integer l = llGetListLength(_ENRPC_CLEP) / _ENRPC_CLEP_STRIDE;
+    for (i = 0; i < l; i++) llListenRemove((integer)llList2String(_ENRPC_CLEP, i * _ENRPC_CLEP_STRIDE + 2)); // for each domain in _ENRPC_CLEP, remove listen by handle (we'll be replacing later)
+}
+
+//  internal function that runs llListen on everything in _ENRPC_CLEP - DON'T run this without running _enRPC_UnListenAll() first!
+_enRPC_ListenAll()
+{
+    #if defined TRACE_ENCLEP
+        enLog_TraceParams("enRPC_ListenDomains", [], []);
+    #endif
+
+    integer i;
+    integer l = llGetListLength(_ENRPC_CLEP) / _ENRPC_CLEP_STRIDE;
+    if (l > 64 - enRPC_ReservedListens())
+    {
+        enLog_Warn("enCLEP overflow (" + (string)l + " + " + (string)enRPC_ReservedListens() + " reserved > 64)");
+        l = 64 - enRPC_ReservedListens();
+    }
+    list c;
+    // for each domain in _ENRPC_CLEP, add listen and update _ENRPC_CLEP with handle
+    for (i = 0; i < l; i++)
+    {
+        string domain = llList2String(_ENRPC_CLEP, i * _ENRPC_CLEP_STRIDE);
+        integer channel = enRPC_Channel(domain);
+        c += [channel];
+        integer handle = llListen(llList2Integer(c, -1), "", "", "");
+        llListReplaceList(_ENRPC_CLEP, [handle], i * _ENRPC_CLEP_STRIDE + 2, i * _ENRPC_CLEP_STRIDE + 2);
+        enLog_Trace("enCLEP listening on domain \"" + domain + "\" channel " + (string)channel + " handle " + (string)handle);
+    }
+}
 
 string _enRPC_Send(
     integer flags, // internal flags
@@ -103,7 +318,7 @@ string _enRPC_Send(
     {
         if (flags & (FLAG_ENRPC_METHOD_CLEP | FLAG_ENRPC_METHOD_SNEP)) return "";
         target_link = (integer)target_selector;
-        if (!target_link) target_link = OVERRIDE_ENLEP_LINK_MESSAGE_SCOPE;
+        if (!target_link) target_link = OVERRIDE_INTEGER_ENRPC_LINK_MESSAGE_SCOPE;
     }
     if (flags & FLAG_ENRPC_METHOD_CLEP)
     {
@@ -169,8 +384,8 @@ string _enRPC_Send(
                 enLog_Trace(_ENRPC_OUTBOUND_SIGNATURE_MESSAGE);
             #endif
             
-            if (llGetSubString(private_key, 0, 4) == "-----") json += ",\"s\":{\"a\":\"" + OVERRIDE_ENRPC_RSA_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"r\":\"" + llSignRSA(private_key, OVERRIDE_ENRPC_RSA_ALGORITHM + _ENRPC_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENRPC_RSA_ALGORITHM) + "\"}"; // use RSA if we were passed an RSA private key
-            else json += ",\"s\":{\"a\":\"" + OVERRIDE_ENRPC_HMAC_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"h\":\"" + llHMAC(private_key, OVERRIDE_ENRPC_HMAC_ALGORITHM + _ENRPC_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENRPC_HMAC_ALGORITHM) + "\"}"; // use HMAC otherwise, since it accepts anything
+            if (llGetSubString(private_key, 0, 4) == "-----") json += ",\"s\":{\"a\":\"" + OVERRIDE_STRING_ENRPC_RSA_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"r\":\"" + llSignRSA(private_key, OVERRIDE_STRING_ENRPC_RSA_ALGORITHM + _ENRPC_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_STRING_ENRPC_RSA_ALGORITHM) + "\"}"; // use RSA if we were passed an RSA private key
+            else json += ",\"s\":{\"a\":\"" + OVERRIDE_STRING_ENRPC_HMAC_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"h\":\"" + llHMAC(private_key, OVERRIDE_STRING_ENRPC_HMAC_ALGORITHM + _ENRPC_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_STRING_ENRPC_HMAC_ALGORITHM) + "\"}"; // use HMAC otherwise, since it accepts anything
         }
     #endif
 
@@ -211,7 +426,19 @@ string _enRPC_Send(
     #if defined FEATURE_ENRPC_ENABLE_CLEP
         if (flags & FLAG_ENRPC_METHOD_CLEP)
         {
-            _enCLEP_SendRaw(target_prim, enCLEP_Channel(domain), json);
+            integer channel = enRPC_Channel(domain);
+            if (target_prim == "") target_prim = NULL_KEY;
+            if (target_prim == NULL_KEY) llRegionSay(channel, json); // RS if prim is not specified
+            else if (llGetObjectDetails(target_prim, [OBJECT_PHANTOM]) != []) llRegionSayTo(target_prim, channel, json); // RST if prim is in region
+    #endif
+    #if defined FEATURE_ENRPC_ENABLE_CLEP && defined FEATURE_ENCLEP_ENABLE_SHOUT
+            else llShout(channel, json); // shout if prim is not in region and FEATURE_ENCLEP_ENABLE_SHOUT is defined
+    #elif defined FEATURE_ENRPC_ENABLE_CLEP && defined FEATURE_ENCLEP_ENABLE_SAY
+            else llSay(channel, json); // say if prim is not in region and FEATURE_ENCLEP_ENABLE_SAY is defined
+    #elif defined FEATURE_ENRPC_ENABLE_CLEP && defined FEATURE_ENCLEP_ENABLE_WHISPER
+            else llWhisper(channel, json); // whisper if prim is not in region and FEATURE_ENCLEP_ENABLE_WHISPER is defined
+    #endif
+    #if defined FEATURE_ENRPC_ENABLE_CLEP
         }
     #endif
 
@@ -355,7 +582,7 @@ integer _enRPC_Unmarshal(
     }
     if (llJsonValueType(json, ["e", "c"]) != JSON_INVALID) error_data = llJsonGetValue(json, ["e", "d"]);
 
-    if (source_link != -1 && domain != OVERRIDE_ENRPC_LEP_DOMAIN) return 6; // discard message if it doesn't match the domain OVERRIDE_ENRPC_LEP_DOMAIN and received via link_message
+    if (source_link != -1 && domain != OVERRIDE_STRING_ENRPC_LEP_DOMAIN) return 6; // discard message if it doesn't match the domain OVERRIDE_STRING_ENRPC_LEP_DOMAIN and received via link_message
 
     string key_name;
 
@@ -365,7 +592,7 @@ integer _enRPC_Unmarshal(
             string algorithm = llJsonGetValue(json, ["s", "a"]);
             string timestamp = llJsonGetValue(json, ["s", "t"]);
 
-            if (llAbs(enDatetime_TimestampDiffToSeconds(timestamp, llGetTimestamp())) < OVERRIDE_ENRPC_SIGNATURE_EXPIRY)
+            if (llAbs(enDatetime_TimestampDiffToSeconds(timestamp, llGetTimestamp())) < OVERRIDE_INTEGER_ENRPC_SIGNATURE_EXPIRY)
             {
                 #define _ENRPC_INBOUND_SIGNATURE_MESSAGE \
                     algorithm \

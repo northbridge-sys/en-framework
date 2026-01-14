@@ -22,38 +22,37 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// NOTE: do not use FLAG_ENCLEP_LISTEN_OWNERONLY across region borders!
-#define FLAG_ENCLEP_LISTEN_OWNERONLY 0x1
-#define FLAG_ENCLEP_LISTEN_REMOVE 0x80000000
+// NOTE: do not use FLAG_ENRPC_LISTEN_OWNERONLY across region borders!
+#define FLAG_ENRPC_LISTEN_OWNERONLY 0x1
+#define FLAG_ENRPC_LISTEN_REMOVE 0x80000000
 
-#ifndef OVERRIDE_INTEGER_ENCLEP_RESERVE_LISTENS
-    #define OVERRIDE_INTEGER_ENCLEP_RESERVE_LISTENS 0
+#ifndef OVERRIDE_INTEGER_ENRPC_RESERVE_LISTENS
+    #define OVERRIDE_INTEGER_ENRPC_RESERVE_LISTENS 0
 #endif
 
-// used by enCLEP_DialogListen()
-integer _ENCLEP_DIALOG_LSN;
+// used by enRPC_DialogListen()
+integer _ENRPC_DIALOG_LSN;
 
-list _ENCLEP_DOMAINS; // domain, flags, handle
-#define _ENCLEP_DOMAINS_STRIDE 3
+list _ENRPC_CLEP; // domain, flags, handle
+#define _ENRPC_CLEP_STRIDE 3
 
 /*
-enCLEP_Channel is the hashing algorithm that converts a domain into a channel number.
+enRPC_Channel is the hashing algorithm that converts a domain into a channel number for CLEP.
 This is used to enforce channel separation on different domains. This reduces script time for llRegionSay calls.
-enCLEP_Channel can also be used directly in llListen for a relatively safe llDialog channel (see enCLEP_DialogChannel()).
-enCLEP channels are always negative, so we just set the 0x80000000 bit to force a negative integer of some kind.
+CLEP channels are always negative, so we just set the 0x80000000 bit to force a negative integer of some kind.
 This also naturally avoids PUBLIC_CHANNEL (0x0 -> 0x80000000) and DEBUG_CHANNEL (0x7FFFFFFF -> 0xFFFFFFFF).
 */
-#define enCLEP_Channel(domain) \
+#define enRPC_Channel(domain) \
     (llHash(domain) | CONST_INTEGER_NEGATIVE)
 
-#define enCLEP_Reserved() \
-    (!!_ENCLEP_DIALOG_LSN + OVERRIDE_INTEGER_ENCLEP_RESERVE_LISTENS)
+#define enRPC_ReservedListens() \
+    (!!_ENRPC_DIALOG_LSN + OVERRIDE_INTEGER_ENRPC_RESERVE_LISTENS)
 
 /*
-enCLEP_DialogChannel can be used to get the channel we are listing to if enCLEP_DialogListen was called.
+enRPC_DialogChannel can be used to get the channel we are listing to if enRPC_DialogListen was called.
 */
-#define enCLEP_DialogChannel() \
-    enCLEP_Channel((string)llGetInventoryKey(llGetScriptName()))
+#define enRPC_DialogChannel() \
+    enRPC_Channel((string)llGetInventoryKey(llGetScriptName()))
 
 /*!
 Sends a request using the CLEP-RPC protocol.
