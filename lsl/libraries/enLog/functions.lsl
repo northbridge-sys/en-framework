@@ -48,18 +48,18 @@ enLog_To(
         if (target == "") llOwnerSay(message); // target to owner
         else llRegionSayTo(target, 0, message); // log to specific user
     }
-    #ifndef FEATURE_ENLOG_DISABLE_LOGTARGET
+    #if defined FEATURE_ENLOG_ENABLE_LOGTARGET
         string t = enLog_GetLogtarget();
         string prim = llGetSubString(t, 0, 35); // prim is first 36 chars of logtarget
         if (enKey_IsPrimInRegion(prim))
-        { // log via enCLEP to logtarget
+        { // log via CLEP to logtarget
             string domain = llDeleteSubString(t, 0, 35); // domain is remaining chars of logtarget
             enCLEP_RPCRequest(
                 prim, // target_prim
                 "", // target_script
                 domain, // clep_domain
                 level, // int
-                "enLog." + enLog_LevelToString(level), // method
+                "enLog", // method
                 "{\"line\":" + (string)line + ",\"ts\":\"" + llGetTimestamp() + "\",\"used\":" + (string)llGetUsedMemory() + ",\"limit\":" + (string)llGetUsedMemory() + "}", // params
                 message // id
             );
@@ -263,15 +263,6 @@ enLog_TraceParamsResult(
 )
 {
     enLog_ParamsResult(TRACE, function_name, param_names, param_values, result);
-}
-
-integer enLog_TraceReturn(
-    string function_name,
-    integer e
-)
-{
-    enLog_Trace((string)function_name + "() -> " + (string)e);
-    return e;
 }
 
 integer enLog_GetLoglevel()
