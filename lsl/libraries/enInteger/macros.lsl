@@ -85,4 +85,4 @@ This is mainly used for error code traces (each function appends its error out o
 This allows the resulting caller to quickly check that the procedure was successful by checking (!e).
 */
 #define enInteger_PushNybble(nybble, int) \
-    (int << 4) | nybble;
+    (int << 4) | nybble
