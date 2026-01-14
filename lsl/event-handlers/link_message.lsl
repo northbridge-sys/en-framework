@@ -24,10 +24,10 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
     #define _HOOK_EN_LINK_MESSAGE
 #endif
 
-// _enLEP_link_message
+// _enRPC_link_message
 #if defined FEATURE_ENRPC_ENABLE_LEP
     #define _EVENT_LINK_MESSAGE
-    #define _HOOK_ENLEP_LINK_MESSAGE
+    #define _HOOK_ENRPC_LINK_MESSAGE
 #endif
 
 // EVENT HANDLER
@@ -59,8 +59,8 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
         // process through hooks until one catches
 
 
-        #if defined _HOOK_ENLEP_LINK_MESSAGE
-		    if (~_enLEP_link_message(l, i, s, k) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
+        #if defined _HOOK_ENRPC_LINK_MESSAGE
+		    if (~_enRPC_link_message(l, i, s, k) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
         #endif
 
 		#if defined _HOOK_EN_LINK_MESSAGE

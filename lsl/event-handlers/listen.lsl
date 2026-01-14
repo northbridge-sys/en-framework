@@ -16,10 +16,10 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// if we want to receive any CLEP-RPC messages, trigger _enCLEP_listen()
+// if we want to receive any CLEP messages, trigger _enRPC_listen()
 #if defined FEATURE_ENRPC_ENABLE_CLEP
     #define _EVENT_LISTEN
-    #define _HOOK_ENCLEP_LISTEN
+    #define _HOOK_ENRPC_LISTEN
 #endif
 
 // if we defined EVENT_EN_LISTEN, pass all non-caught listen() events to en_listen()
@@ -61,8 +61,8 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
             );
         #endif
 
-        #if defined _HOOK_ENCLEP_LISTEN
-		    if (~_enCLEP_listen(channel, name, id, message) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
+        #if defined _HOOK_ENRPC_LISTEN
+		    if (~_enRPC_listen(channel, name, id, message) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
         #endif
         
 		#if defined _HOOK_EN_LISTEN
