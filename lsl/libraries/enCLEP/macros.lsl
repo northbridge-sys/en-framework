@@ -71,11 +71,11 @@ Sends a request using the CLEP-RPC protocol.
 #define enCLEP_RequestRoutedRPC(    target_region, target_prim, target_script, domain, int, method, params, id) \
                 _enCLEP_RPCSend("", target_region, target_prim, target_script, domain, int, method, params, id, "", 0, "", "")
 
-#define enCLEP_RPCRequestSigned(             key_name,      target_prim, target_script, domain, int, method, params, id) \
-                _enCLEP_RPCSend(enRPC_GetKey(key_name), "", target_prim, target_script, domain, int, method, params, id, "", 0, "", "")
+#define enCLEP_RPCRequestSigned(key_name,     target_prim, target_script, domain, int, method, params, id) \
+                _enCLEP_RPCSend(key_name, "", target_prim, target_script, domain, int, method, params, id, "", 0, "", "")
 
-#define enCLEP_RequestRoutedSignedRPC(             key_name,  target_region, target_prim, target_script, domain, int, method, params, id) \
-                      _enCLEP_RPCSend(enRPC_GetKey(key_name), target_region, target_prim, target_script, domain, int, method, params, id, "", 0, "", "")
+#define enCLEP_RequestRoutedSignedRPC(key_name, target_region, target_prim, target_script, domain, int, method, params, id) \
+                      _enCLEP_RPCSend(key_name, target_region, target_prim, target_script, domain, int, method, params, id, "", 0, "", "")
 
 /*!
 Responds using the CLEP-RPC protocol.
@@ -96,11 +96,11 @@ Responds using the CLEP-RPC protocol.
 #define _enCLEP_RespondRoutedRPC(    target_region, target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data) \
                  _enCLEP_RPCSend("", target_region, target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data)
 
-#define _enCLEP_RPCSignedResponse(             key_name,      target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data) \
-                  _enCLEP_RPCSend(enRPC_GetKey(key_name), "", target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data)
+#define _enCLEP_RPCSignedResponse(key_name,     target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data) \
+                  _enCLEP_RPCSend(key_name, "", target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data)
 
-#define _enCLEP_RespondRoutedSignedRPC(             key_name,  target_region, target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data) \
-                       _enCLEP_RPCSend(enRPC_GetKey(key_name), target_region, target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data)
+#define _enCLEP_RespondRoutedSignedRPC(key_name, target_region, target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data) \
+                       _enCLEP_RPCSend(key_name, target_region, target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data)
 
 /*!
 Responds with a result using the CLEP-RPC protocol.
@@ -118,11 +118,11 @@ Responds with a result using the CLEP-RPC protocol.
 #define enCLEP_RPCRoutedResult(    target_region, target_prim, target_script, domain, int, method, params, id, result) \
                _enCLEP_RPCSend("", target_region, target_prim, target_script, domain, int, method, params, id, result, 0, "", "")
 
-#define enCLEP_RPCSignedResult(             key_name,      target_prim, target_script, domain, int, method, params, id, result) \
-               _enCLEP_RPCSend(enRPC_GetKey(key_name), "", target_prim, target_script, domain, int, method, params, id, result, 0, "", "")
+#define enCLEP_RPCSignedResult(key_name,     target_prim, target_script, domain, int, method, params, id, result) \
+               _enCLEP_RPCSend(key_name, "", target_prim, target_script, domain, int, method, params, id, result, 0, "", "")
 
-#define enCLEP_RPCRoutedSignedResult(             key_name,  target_region, target_prim, target_script, domain, int, method, params, id, result) \
-                     _enCLEP_RPCSend(enRPC_GetKey(key_name), target_region, target_prim, target_script, domain, int, method, params, id, result, 0, "", "")
+#define enCLEP_RPCRoutedSignedResult(key_name, target_region, target_prim, target_script, domain, int, method, params, id, result) \
+                     _enCLEP_RPCSend(key_name, target_region, target_prim, target_script, domain, int, method, params, id, result, 0, "", "")
 
 /*!
 Responds with an error using the CLEP-RPC protocol.
@@ -142,8 +142,8 @@ Responds with an error using the CLEP-RPC protocol.
 #define enCLEP_RPCRoutedError(    target_region, target_prim, target_script, domain, int, method, params, id,     error_code, error_message, error_data) \
               _enCLEP_RPCSend("", target_region, target_prim, target_script, domain, int, method, params, id, "", error_code, error_message, error_data)
 
-#define enCLEP_RPCSignedError(             key_name,      target_prim, target_script, domain, int, method, params, id,     error_code, error_message, error_data) \
-              _enCLEP_RPCSend(enRPC_GetKey(key_name), "", target_prim, target_script, domain, int, method, params, id, "", error_code, error_message, error_data)
+#define enCLEP_RPCSignedError(key_name,     target_prim, target_script, domain, int, method, params, id,     error_code, error_message, error_data) \
+              _enCLEP_RPCSend(key_name, "", target_prim, target_script, domain, int, method, params, id, "", error_code, error_message, error_data)
 
-#define enCLEP_RPCRoutedSignedError(             key_name, target_region, target_prim, target_script, domain, int, method, params, id,     error_code, error_message, error_data) \
-                    _enCLEP_RPCSend(enRPC_GetKey(key_name), target_region, target_prim, target_script, domain, int, method, params, id, "", error_code, error_message, error_data)
+#define enCLEP_RPCRoutedSignedError(key_name, target_region, target_prim, target_script, domain, int, method, params, id,     error_code, error_message, error_data) \
+                    _enCLEP_RPCSend(key_name, target_region, target_prim, target_script, domain, int, method, params, id, "", error_code, error_message, error_data)

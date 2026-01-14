@@ -38,8 +38,8 @@ Sends a request using the LEP-RPC protocol.
 #define enLEP_RPCRequest(    target_link, target_script,                        int, method, params, id) \
           _enLEP_RPCSend("", target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, "", 0, "", "")
 
-#define enLEP_RPCRequestSigned(             key_name,  target_link, target_script,                        int, method, params, id) \
-                _enLEP_RPCSend(enRPC_GetKey(key_name), target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, "", 0, "", "")
+#define enLEP_RPCRequestSigned(key_name, target_link, target_script,                        int, method, params, id) \
+                _enLEP_RPCSend(key_name, target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, "", 0, "", "")
 
 /*!
 Responds using the LEP-RPC protocol.
@@ -56,8 +56,8 @@ Responds using the LEP-RPC protocol.
 #define _enLEP_RPCResponse(    target_link, target_script,                        int, method, params, id, result, error_code, error_message, error_data) \
             _enLEP_RPCSend("", target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, result, error_code, error_message, error_data)
 
-#define _enLEP_RPCSignedResponse(             key_name,  target_link, target_script,                        int, method, params, id, result, error_code, error_message, error_data) \
-                  _enLEP_RPCSend(enRPC_GetKey(key_name), target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, result, error_code, error_message, error_data)
+#define _enLEP_RPCSignedResponse(key_name, target_link, target_script,                        int, method, params, id, result, error_code, error_message, error_data) \
+                  _enLEP_RPCSend(key_name, target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, result, error_code, error_message, error_data)
 
 /*!
 Responds with a result using the LEP-RPC protocol.
@@ -71,8 +71,8 @@ Responds with a result using the LEP-RPC protocol.
 #define enLEP_RPCResult(    target_link, target_script,                        int, method, params, id, result) \
          _enLEP_RPCSend("", target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, result, 0, "", "")
 
-#define enLEP_RPCSignedResult(             key_name,  target_link, target_script,                        int, method, params, id, result) \
-               _enLEP_RPCSend(enRPC_GetKey(key_name), target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, result, 0, "", "")
+#define enLEP_RPCSignedResult(key_name, target_link, target_script,                        int, method, params, id, result) \
+               _enLEP_RPCSend(key_name, target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, result, 0, "", "")
 
 /*!
 Responds with an error using the LEP-RPC protocol.
@@ -88,5 +88,5 @@ Responds with an error using the LEP-RPC protocol.
 #define enLEP_RPCError(    target_link, target_script,                        int, method, params, id,     error_code, error_message, error_data) \
         _enLEP_RPCSend("", target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, "", error_code, error_message, error_data)
 
-#define enLEP_RPCSignedError(             key_name,  target_link, target_script,                        int, method, params, id,     error_code, error_message, error_data) \
-              _enLEP_RPCSend(enRPC_GetKey(key_name), target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, "", error_code, error_message, error_data)
+#define enLEP_RPCSignedError(key_name, target_link, target_script,                        int, method, params, id,     error_code, error_message, error_data) \
+              _enLEP_RPCSend(key_name, target_link, target_script, OVERRIDE_ENRPC_DOMAIN, int, method, params, id, "", error_code, error_message, error_data)
