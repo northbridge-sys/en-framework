@@ -20,12 +20,24 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-string _enRPC_Marshal(
+
+/*!
+An external loader for HTTP parameters is needed to simplify _enRPC_Send(), since lists don't work with the preprocessor.
+*/
+enRPC_StageHTTPParameters(
+    list http_parameters
+)
+{
+    _ENRPC_HTTP_PARAMETERS = http_parameters;
+}
+
+
+string _enRPC_Send(
     integer flags, // internal flags
     string key_name,
     string source_script,
-    string target_region, // only required if relay routing is requested
-    string target_prim, // only required if relay routing is requested
+    string target_selector, // LEP: target_link_number / CLEP: target_region (for routing only) / SNEP: target_request_id (response to inbound HTTP request), target_url (request to general HTTP server), relay_url (request to SNEP relay)
+    string target_prim, // LEP: ignored / CLEP: target_prim (optional) / SNEP: target_prim (for SNEP relays only)
     string target_script,
     string domain,
     integer int,
@@ -67,25 +79,48 @@ string _enRPC_Marshal(
     }
     NOTE: these values are not ordered this way!
     */
-    string addl;
-    if (flags & FLAG_ENRPC_EMBED_INT) addl += ",\"i\":" + (string)int; // embed int into JSON (used by CLEP)
-    if (domain != "") addl += ",\"d\":\"" + enString_EscapeQuotes(domain) + "\""; // add domain
-    if (id != "") addl += ",\"id\":\"" + enString_EscapeQuotes(id) + "\""; // add id
-    if (flags & FLAG_ENRPC_EMBED_PARAMS && llJsonValueType(params, []) != JSON_INVALID) addl += ",\"p\":" + params; // embed params into JSON (used by CLEP)
-    if (llJsonValueType(result, []) != JSON_INVALID) addl += ",\"r\":" + result; // we are sending a response with a result, so add it
+    string json;
+    if (~flags & FLAG_ENRPC_METHOD_LEP) json += ",\"i\":" + (string)int; // embed int into JSON (used by CLEP/SNEP)
+    if (domain != "") json += ",\"d\":\"" + enString_EscapeQuotes(domain) + "\""; // add domain
+    if (id != "") json += ",\"id\":\"" + enString_EscapeQuotes(id) + "\""; // add id
+    if (~flags & FLAG_ENRPC_METHOD_LEP && llJsonValueType(params, []) != JSON_INVALID) json += ",\"p\":" + params; // embed params into JSON (used by CLEP/SNEP)
+    if (llJsonValueType(result, []) != JSON_INVALID) json += ",\"r\":" + result; // we are sending a response with a result, so add it
     else if (error_code || error_message != "" || error_data != "")
     { // we are sending a response with an error, so add it
-        addl += ",\"e\":{\"c\":" + (string)error_code + ",\"m\":\"" + enString_EscapeQuotes(error_message) + "\"";
-        if (llJsonValueType(error_data, []) != JSON_INVALID) addl += ",\"d\":" + error_data;
-        addl += "}";
+        json += ",\"e\":{\"c\":" + (string)error_code + ",\"m\":\"" + enString_EscapeQuotes(error_message) + "\"";
+        if (llJsonValueType(error_data, []) != JSON_INVALID) json += ",\"d\":" + error_data;
+        json += "}";
     }
     // if no r/e, we are sending a request
 
+    // what does target_selector do?
+    // TODO: if target_prim is specified and valid within linkset, opportunistically send via CLEP if it is enabled
+    // TODO: allow multi-method sending
+    integer target_link;
+    string target_region;
+    string target_url;
+    if (flags & FLAG_ENRPC_METHOD_LEP)
+    {
+        if (flags & (FLAG_ENRPC_METHOD_CLEP | FLAG_ENRPC_METHOD_SNEP)) return "";
+        target_link = (integer)target_selector;
+        if (!target_link) target_link = OVERRIDE_ENLEP_LINK_MESSAGE_SCOPE;
+    }
+    if (flags & FLAG_ENRPC_METHOD_CLEP)
+    {
+        if (flags & (FLAG_ENRPC_METHOD_LEP | FLAG_ENRPC_METHOD_CLEP)) return "";
+        target_region = target_selector;
+    }
+    if (flags & FLAG_ENRPC_METHOD_SNEP)
+    {
+        if (flags & (FLAG_ENRPC_METHOD_CLEP | FLAG_ENRPC_METHOD_LEP)) return "";
+        target_url = target_selector;
+    }
+
     #if defined FEATURE_ENCLEP_ENABLE_ROUTING || defined FEATURE_ENRPC_ENABLE_SIGNING
         if (enKey_IsNotNull(target_prim)) // we are requesting routing, so add routing information
-            addl += ",\"sp\":\"" + (string)llGetKey() + "\",\"tp\":\"" + target_prim + "\",\"sr\":\"" + enString_EscapeQuotes(llGetRegionName()) + "\",\"tr\":\"" + enString_EscapeQuotes(target_region) + "\"";
+            json += ",\"sp\":\"" + (string)llGetKey() + "\",\"tp\":\"" + target_prim + "\",\"sr\":\"" + enString_EscapeQuotes(llGetRegionName()) + "\",\"tr\":\"" + enString_EscapeQuotes(target_region) + "\"";
         else if (key_name != "") // we are not requesting routing, but we are signing
-            addl += ",\"sp\":\"" + (string)llGetKey() + "\"";
+            json += ",\"sp\":\"" + (string)llGetKey() + "\"";
     #endif
     
     #if defined FEATURE_ENRPC_ENABLE_SIGNING
@@ -110,9 +145,9 @@ string _enRPC_Marshal(
                 error_code
                 error_message
                 error_data
-                target_prim   \
-                source_region  > these three values are only included if we are requesting routing
-                target_region /
+                target_prim     \
+                source_region    > these three values are only included if we are requesting routing
+                target_selector /
             */
             #define _ENRPC_OUTBOUND_SIGNATURE_MESSAGE \
                   timestamp \
@@ -128,22 +163,83 @@ string _enRPC_Marshal(
                 + (string)error_code \
                 + error_message \
                 + error_data \
-                + enString_If(enKey_IsNotNull(target_prim), target_prim + llGetRegionName() + target_region, "")
+                + enString_If(enKey_IsNotNull(target_prim), target_prim + llGetRegionName() + target_selector, "")
 
             #if defined TRACE_ENRPC_OUTBOUND_SIGNATURE_MESSAGE
                 enLog_Trace(_ENRPC_OUTBOUND_SIGNATURE_MESSAGE);
             #endif
             
-            if (llGetSubString(private_key, 0, 4) == "-----") addl += ",\"s\":{\"a\":\"" + OVERRIDE_ENRPC_RSA_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"r\":\"" + llSignRSA(private_key, OVERRIDE_ENRPC_RSA_ALGORITHM + _ENRPC_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENRPC_RSA_ALGORITHM) + "\"}"; // use RSA if we were passed an RSA private key
-            else addl += ",\"s\":{\"a\":\"" + OVERRIDE_ENRPC_HMAC_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"h\":\"" + llHMAC(private_key, OVERRIDE_ENRPC_HMAC_ALGORITHM + _ENRPC_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENRPC_HMAC_ALGORITHM) + "\"}"; // use HMAC otherwise, since it accepts anything
+            if (llGetSubString(private_key, 0, 4) == "-----") json += ",\"s\":{\"a\":\"" + OVERRIDE_ENRPC_RSA_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"r\":\"" + llSignRSA(private_key, OVERRIDE_ENRPC_RSA_ALGORITHM + _ENRPC_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENRPC_RSA_ALGORITHM) + "\"}"; // use RSA if we were passed an RSA private key
+            else json += ",\"s\":{\"a\":\"" + OVERRIDE_ENRPC_HMAC_ALGORITHM + "\",\"t\":\"" + timestamp + "\",\"h\":\"" + llHMAC(private_key, OVERRIDE_ENRPC_HMAC_ALGORITHM + _ENRPC_OUTBOUND_SIGNATURE_MESSAGE, OVERRIDE_ENRPC_HMAC_ALGORITHM) + "\"}"; // use HMAC otherwise, since it accepts anything
         }
     #endif
 
-    // return whatever we're sending
-    return "{\"ss\":\"" + enString_EscapeQuotes(source_script)
+    // add required values
+    json = "{\"ss\":\"" + enString_EscapeQuotes(source_script)
         + "\",\"ts\":\"" + enString_EscapeQuotes(target_script)
         + "\",\"m\":\"" + enString_EscapeQuotes(method)
-        + "\"" + addl + "}";
+        + "\"" + json + "}";
+
+    #if defined FEATURE_ENRPC_ENABLE_LEP
+        if (flags & FLAG_ENRPC_METHOD_LEP)
+        {
+            llMessageLinked(
+                target_link,
+                int,
+                _enRPC_Send(
+                    0, // flags
+                    key_name,
+                    llGetScriptName(),
+                    "", // target_region
+                    "", // target_prim
+                    target_script,
+                    domain,
+                    int,
+                    method,
+                    params,
+                    id,
+                    result,
+                    error_code,
+                    error_message,
+                    error_data
+                ),
+                params
+            );
+        }
+    #endif
+
+    #if defined FEATURE_ENRPC_ENABLE_CLEP
+        if (flags & FLAG_ENRPC_METHOD_CLEP)
+        {
+            _enCLEP_SendRaw(target_prim, enCLEP_Channel(domain), json);
+        }
+    #endif
+
+    #if defined FEATURE_ENRPC_ENABLE_SNEP
+        if (flags & FLAG_ENRPC_METHOD_SNEP)
+        {
+            if (enKey_IsNotNull(target_url))
+            { // target_url is a UUID; we are responding to a previous inbound HTTP request
+                llHTTPResponse(
+                    target_url, // pass target_url as request ID
+                    200,
+                    json
+                );
+            }
+            else
+            {
+                // target_url is probably a URL; we are requesting via a new outbound HTTP request
+                id = llHTTPRequest(
+                    target_url, 
+                    _ENRPC_HTTP_PARAMETERS, 
+                    json
+                );
+                _ENRPC_HTTP_PARAMETERS = [];
+            }
+        }
+    #endif
+
+    return id;
 }
 
 integer _enRPC_Unmarshal(
@@ -259,7 +355,7 @@ integer _enRPC_Unmarshal(
     }
     if (llJsonValueType(json, ["e", "c"]) != JSON_INVALID) error_data = llJsonGetValue(json, ["e", "d"]);
 
-    if (source_link != -1 && domain != OVERRIDE_ENRPC_DOMAIN) return 6; // discard message if it doesn't match the domain OVERRIDE_ENRPC_DOMAIN and received via link_message
+    if (source_link != -1 && domain != OVERRIDE_ENRPC_LEP_DOMAIN) return 6; // discard message if it doesn't match the domain OVERRIDE_ENRPC_LEP_DOMAIN and received via link_message
 
     string key_name;
 
@@ -322,17 +418,17 @@ integer _enRPC_Unmarshal(
     string source_data;
     if (source_link == -1)
     {
-        flags += FLAG_ENRPC_SOURCE_CLEP;
+        flags += FLAG_ENRPC_METHOD_CLEP;
         source_data = "{\"r\":\"" + source_region + "\",\"p\":\"" + source_prim + "\"}";
     }
     else if (source_link == -2)
     {
-        flags += FLAG_ENRPC_SOURCE_SNEP;
+        flags += FLAG_ENRPC_METHOD_SNEP;
         source_data = "{\"u\":\"" + source_url + "\",\"p\":\"" + source_prim + "\"}";
     }
     else
     {
-        flags += FLAG_ENRPC_SOURCE_LEP;
+        flags += FLAG_ENRPC_METHOD_LEP;
         source_data = "{\"l\":" + (string)source_link + "}";
     }
 

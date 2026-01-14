@@ -114,7 +114,7 @@ _enCLEP_SendRaw( // llRegionSayTo with llRegionSay for NULL_KEY instead of silen
     string target_prim,
     integer channel,
     string message
-    )
+)
 {
     #if defined TRACE_ENCLEP_SENDRAW
         enLog_TraceParams("_enCLEP_SendRaw", ["target_prim", "channel", "message"], [
@@ -133,86 +133,6 @@ _enCLEP_SendRaw( // llRegionSayTo with llRegionSay for NULL_KEY instead of silen
     #elif defined FEATURE_ENCLEP_ENABLE_WHISPER
         else llWhisper(channel, message); // whisper if prim is not in region and FEATURE_ENCLEP_ENABLE_WHISPER is defined
     #endif
-}
-
-/*
-CLEP-RPC, compatible with LEP-RPC.
-*/
-string _enCLEP_RPCSend(
-    string key_name,
-    string target_region,
-    string target_prim,
-    string target_script,
-    string domain,
-    integer int,
-    string method,
-    string params,
-    string id,
-    string result,
-    integer error_code,
-    string error_message,
-    string error_data
-)
-{
-    #if defined TRACE_ENCLEP_SENDRPC
-        enLog_TraceParams(
-            "_enCLEP_RPCSend",
-            [
-                "key_name",
-                "target_region",
-                "target_prim",
-                "target_script",
-                "domain",
-                "int",
-                "method",
-                "params",
-                "id",
-                "result",
-                "error_code",
-                "error_message",
-                "error_data"
-            ],
-            [
-                enString_Elem(key_name),
-                enString_Elem(target_region),
-                enPrim_Elem(target_prim),
-                enString_Elem(target_script),
-                enString_Elem(domain),
-                int,
-                method,
-                params,
-                id,
-                result,
-                error_code,
-                enString_Elem(error_message),
-                error_data
-            ]
-        );
-    #endif
-
-    _enCLEP_SendRaw(
-        target_prim,
-        enCLEP_Channel(domain),
-        _enRPC_Marshal(
-            FLAG_ENRPC_EMBED_INT | FLAG_ENRPC_EMBED_PARAMS,
-            key_name,
-            llGetScriptName(),
-            target_region,
-            target_prim,
-            target_script,
-            domain,
-            int,
-            method,
-            params,
-            id,
-            result,
-            error_code,
-            error_message,
-            error_data
-        )
-    );
-
-    return id;
 }
 
 /*

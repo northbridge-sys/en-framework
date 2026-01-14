@@ -21,18 +21,15 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 // internal flags
-#define FLAG_ENRPC_SOURCE_LEP 0x1
-#define FLAG_ENRPC_SOURCE_CLEP 0x2
-#define FLAG_ENRPC_SOURCE_SNEP 0x4
+#define FLAG_ENRPC_METHOD_LEP 0x1
+#define FLAG_ENRPC_METHOD_CLEP 0x2
+#define FLAG_ENRPC_METHOD_SNEP 0x4
 #define FLAG_ENRPC_REQUEST 0x10
 #define FLAG_ENRPC_RESULT 0x20
 #define FLAG_ENRPC_ERROR 0x40
 
-#define FLAG_ENRPC_EMBED_INT 0x1
-#define FLAG_ENRPC_EMBED_PARAMS 0x2
-
-#if !defined OVERRIDE_ENRPC_DOMAIN
-    #define OVERRIDE_ENRPC_DOMAIN ""
+#if !defined OVERRIDE_ENRPC_LEP_DOMAIN
+    #define OVERRIDE_ENRPC_LEP_DOMAIN ""
 #endif
 
 #if !defined OVERRIDE_ENRPC_HMAC_ALGORITHM
@@ -45,4 +42,8 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 
 #if !defined OVERRIDE_ENRPC_SIGNATURE_EXPIRY
     #define OVERRIDE_ENRPC_SIGNATURE_EXPIRY 3
+#endif
+
+#if defined FEATURE_ENRPC_ENABLE_SNEP
+    list _ENRPC_HTTP_PARAMETERS;
 #endif

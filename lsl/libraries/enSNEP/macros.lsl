@@ -21,53 +21,53 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 // used for general-purpose web server communication
-#define enSNEP_RPCRequest(    target_url,             int, method, params, id) \
-          _enSNEP_RPCSend("", target_url, "", "", "", int, method, params, id, "", 0, "", "")
+#define enSNEP_RPCRequest(                                               target_url,             int, method, params, id) \
+              _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, "", llGetScriptName(), target_url, "", "", "", int, method, params, id, "", 0, "", "")
 
-#define _enSNEP_RPCResponse(        target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data) \
-            _enSNEP_RPCSend("", "", target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data)
+#define _enSNEP_RPCResponse(                                                   target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data) \
+                _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, "", llGetScriptName(), "", target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data)
 
-#define enSNEP_RPCResult(        target_prim, target_script, domain, int, method, params, id, result) \
-         _enSNEP_RPCSend("", "", target_prim, target_script, domain, int, method, params, id, result, 0, "", "")
+#define enSNEP_RPCResult(                                                   target_prim, target_script, domain, int, method, params, id, result) \
+             _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, "", llGetScriptName(), "", target_prim, target_script, domain, int, method, params, id, result, 0, "", "")
 
-#define enSNEP_RPCError(        target_prim, target_script, domain, int, method, params, id,     error_code, error_message, error_data) \
-        _enSNEP_RPCSend("", "", target_prim, target_script, domain, int, method, params, id, "", error_code, error_message, error_data)
+#define enSNEP_RPCError(                                                   target_prim, target_script, domain, int, method, params, id,     error_code, error_message, error_data) \
+            _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, "", llGetScriptName(), "", target_prim, target_script, domain, int, method, params, id, "", error_code, error_message, error_data)
 
           
-#define enSNEP_RPCRequestSigned(key_name, target_url,             int, method, params, id) \
-                _enSNEP_RPCSend(key_name, target_url, "", "", "", int, method, params, id, "", 0, "", "")
+#define enSNEP_RPCRequestSigned(                        key_name,                    target_url,             int, method, params, id) \
+                    _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, key_name, llGetScriptName(), target_url, "", "", "", int, method, params, id, "", 0, "", "")
 
-#define _enSNEP_RPCSignedResponse(key_name, target_url,             int, method, params, id, result, error_code, error_message, error_data) \
-                  _enSNEP_RPCSend(key_name, target_url, "", "", "", int, method, params, id, result, error_code, error_message, error_data)
+#define _enSNEP_RPCSignedResponse(                        key_name,                    target_url,             int, method, params, id, result, error_code, error_message, error_data) \
+                      _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, key_name, llGetScriptName(), target_url, "", "", "", int, method, params, id, result, error_code, error_message, error_data)
 
-#define enSNEP_RPCResultSigned(key_name,     target_prim, target_script, domain, int, method, params, id, result) \
-               _enSNEP_RPCSend(key_name, "", target_prim, target_script, domain, int, method, params, id, result, 0, "", "")
+#define enSNEP_RPCResultSigned(                        key_name,                        target_prim, target_script, domain, int, method, params, id, result) \
+                   _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, key_name, llGetScriptName(), "", target_prim, target_script, domain, int, method, params, id, result, 0, "", "")
 
-#define enSNEP_RPCErrorSigned(key_name,     target_prim, target_script, domain, int, method, params, id,     error_code, error_message, error_data) \
-              _enSNEP_RPCSend(key_name, "", target_prim, target_script, domain, int, method, params, id, "", error_code, error_message, error_data)
+#define enSNEP_RPCErrorSigned(                        key_name,                        target_prim, target_script, domain, int, method, params, id,     error_code, error_message, error_data) \
+                  _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, key_name, llGetScriptName(), "", target_prim, target_script, domain, int, method, params, id, "", error_code, error_message, error_data)
 
 // used for SNEP relays
-#define enSNEP_RPCRequestRelayed(    relay_url, target_prim, target_script, domain, int, method, params, id) \
-                 _enSNEP_RPCSend("", relay_url, target_prim, target_script, domain, int, method, params, id, "", 0, "", "")
+#define enSNEP_RPCRequestRelayed(                                               relay_url, target_prim, target_script, domain, int, method, params, id) \
+                     _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, "", llGetScriptName(), relay_url, target_prim, target_script, domain, int, method, params, id, "", 0, "", "")
 
-#define _enSNEP_RPCRespondRelayed(    relay_url, target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data) \
-                  _enSNEP_RPCSend("", relay_url, target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data)
+#define _enSNEP_RPCRespondRelayed(                                               relay_url, target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data) \
+                      _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, "", llGetScriptName(), relay_url, target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data)
 
-#define enSNEP_RPCResultRelayed(    relay_url, target_prim, target_script, domain, int, method, params, id, result) \
-                _enSNEP_RPCSend("", relay_url, target_prim, target_script, domain, int, method, params, id, result, 0, "", "")
+#define enSNEP_RPCResultRelayed(                                               relay_url, target_prim, target_script, domain, int, method, params, id, result) \
+                    _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, "", llGetScriptName(), relay_url, target_prim, target_script, domain, int, method, params, id, result, 0, "", "")
 
-#define enSNEP_RPCErrorRelayed(    relay_url, target_prim, target_script, domain, int, method, params, id,     error_code, error_message, error_data) \
-               _enSNEP_RPCSend("", relay_url, target_prim, target_script, domain, int, method, params, id, "", error_code, error_message, error_data)
+#define enSNEP_RPCErrorRelayed(                                               relay_url, target_prim, target_script, domain, int, method, params, id,     error_code, error_message, error_data) \
+                   _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, "", llGetScriptName(), relay_url, target_prim, target_script, domain, int, method, params, id, "", error_code, error_message, error_data)
 
 
-#define enSNEP_RPCRequestRelayedSigned(key_name, relay_url, target_prim, target_script, domain, int, method, params, id) \
-                       _enSNEP_RPCSend(key_name, relay_url, target_prim, target_script, domain, int, method, params, id, "", 0, "", "")
+#define enSNEP_RPCRequestRelayedSigned(                        key_name,                    relay_url, target_prim, target_script, domain, int, method, params, id) \
+                           _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, llGetScriptName(), key_name, relay_url, target_prim, target_script, domain, int, method, params, id, "", 0, "", "")
 
-#define _enSNEP_RPCRespondRelayedSigned(key_name, relay_url, target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data) \
-                        _enSNEP_RPCSend(key_name, relay_url, target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data)
+#define _enSNEP_RPCRespondRelayedSigned(                        key_name,                    relay_url, target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data) \
+                            _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, key_name, llGetScriptName(), relay_url, target_prim, target_script, domain, int, method, params, id, result, error_code, error_message, error_data)
 
-#define enSNEP_RPCResultRelayedSigned(key_name, relay_url, target_prim, target_script, domain, int, method, params, id, result) \
-                      _enSNEP_RPCSend(key_name, relay_url, target_prim, target_script, domain, int, method, params, id, result, 0, "", "")
+#define enSNEP_RPCResultRelayedSigned(                        key_name,                    relay_url, target_prim, target_script, domain, int, method, params, id, result) \
+                          _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, key_name, llGetScriptName(), relay_url, target_prim, target_script, domain, int, method, params, id, result, 0, "", "")
 
-#define enSNEP_RPCErrorRelayedSigned(key_name, relay_url, target_prim, target_script, domain, int, method, params, id,     error_code, error_message, error_data) \
-                     _enSNEP_RPCSend(key_name, relay_url, target_prim, target_script, domain, int, method, params, id, "", error_code, error_message, error_data)
+#define enSNEP_RPCErrorRelayedSigned(                        key_name,                    relay_url, target_prim, target_script, domain, int, method, params, id,     error_code, error_message, error_data) \
+                         _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, key_name, llGetScriptName(), relay_url, target_prim, target_script, domain, int, method, params, id, "", error_code, error_message, error_data)
