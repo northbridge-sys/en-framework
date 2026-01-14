@@ -221,12 +221,21 @@ integer enString_FindChars(
     return -1;
 }
 
+string enString_JsonTryValue(
+    string json,
+    list specifiers
+)
+{
+    if (llJsonValueType(json, specifiers) != JSON_INVALID) return llJsonGetValue(json, specifiers);
+    return "";
+}
+
 //  attempts to get a value from a json string, and if fails, returns preset value instead of JSON_INVALID
 //  example:
-//      color = (vector)enString_JsonAttempt(json, ["set", "color"], (string)color);
+//      color = (vector)enString_JsonTryValueFallback(json, ["set", "color"], (string)color);
 //      //  if json contains a "set" object with a "color" value, the function will return it
 //      //  otherwise, the function will return the existing value of the color variable
-string enString_JsonAttempt(
+string enString_JsonTryValueFallback(
     string json,
     list specifiers,
     string val
@@ -235,15 +244,6 @@ string enString_JsonAttempt(
     string new_val = llJsonGetValue(json, specifiers);
     if (new_val != JSON_INVALID) return new_val;
     return val;
-}
-
-string enString_JsonTryValue(
-    string json,
-    list specifiers
-)
-{
-    if (llJsonValueType(json, specifiers) != JSON_INVALID) return llJsonGetValue(json, specifiers);
-    return "";
 }
 
 /*
