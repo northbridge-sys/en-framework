@@ -125,7 +125,7 @@ _enRPC_uuid_changed(
 }
 
 /*
-enRPC_DialogListen opens a regular llListen on an enCLEP channel tied to this prim UUID and script name.
+enRPC_DialogListen opens a regular llListen on a CLEP channel tied to this prim UUID and script name.
 This can be used in conjunction with enRPC_DialogChannel for a safe nearly-guaranteed-random channel for this script.
 */
 enRPC_DialogListen()
@@ -151,15 +151,15 @@ enRPC_DialogListenRemove()
 }
 
 /*
-Initializes or updates a dynamically managed enCLEP listener.
+Initializes or updates a dynamically managed CLEP listener.
 This is like llListen, but easier to use.
 
 enRPC_Listen(...) will return 0 and fail to add the listen if you attempt to
 add more than 65 listeners (the maximum allowed per script). If you call
-llListen separately, set the number of listens you want reserved for non-enCLEP\
+llListen separately, set the number of listens you want reserved for non-CLEP\
 use by adding the following line:
     #define OVERRIDE_INTEGER_ENRPC_RESERVE_LISTENS x
-where x is the number of listens you want to allocate for non-enCLEP use.
+where x is the number of listens you want to allocate for non-CLEP use.
 
 Note: domains can be set as the local prim's UUID, in which case they will be
 automatically refreshed on key or link change. However, this ONLY works if the
@@ -188,7 +188,7 @@ integer enRPC_Listen(
         _enRPC_ListenAll();
         return __LINE__;
     }
-    if (~index) _ENRPC_CLEP = llDeleteSubList(_ENRPC_CLEP, index, index + _ENRPC_CLEP_STRIDE - 1); // index == -1; delete existing domain enCLEP, so it can be cleanly appended to the end
+    if (~index) _ENRPC_CLEP = llDeleteSubList(_ENRPC_CLEP, index, index + _ENRPC_CLEP_STRIDE - 1); // index == -1; delete existing domain CLEP, so it can be cleanly appended to the end
     if (llGetListLength(_ENRPC_CLEP) / _ENRPC_CLEP_STRIDE + OVERRIDE_INTEGER_ENRPC_RESERVE_LISTENS > 63)
     { // too many listens (maximum 65, so if we are currently at 64 or more, fail)
         _enRPC_ListenAll();
@@ -199,7 +199,7 @@ integer enRPC_Listen(
     return 0;
 }
 
-//  resets and removes all enCLEP listeners, for single-purpose scripts to not have to independently keep track of listen handles
+//  resets and removes all CLEP listeners, for single-purpose scripts to not have to independently keep track of listen handles
 enRPC_ListenReset()
 {
     #if defined TRACE_ENCLEP
@@ -213,7 +213,7 @@ enRPC_ListenReset()
 _enRPC_UnListenAll()
 {
     #if defined TRACE_ENCLEP
-        enLog_TraceParams("enCLEP_UnListenDomains", [], []);
+        enLog_TraceParams("enRPC_UnListenAll", [], []);
     #endif
     integer i;
     integer l = llGetListLength(_ENRPC_CLEP) / _ENRPC_CLEP_STRIDE;
@@ -224,14 +224,14 @@ _enRPC_UnListenAll()
 _enRPC_ListenAll()
 {
     #if defined TRACE_ENCLEP
-        enLog_TraceParams("enRPC_ListenDomains", [], []);
+        enLog_TraceParams("enRPC_ListenAll", [], []);
     #endif
 
     integer i;
     integer l = llGetListLength(_ENRPC_CLEP) / _ENRPC_CLEP_STRIDE;
     if (l > 64 - enRPC_ReservedListens())
     {
-        enLog_Warn("enCLEP overflow (" + (string)l + " + " + (string)enRPC_ReservedListens() + " reserved > 64)");
+        enLog_Warn("Listen overflow (" + (string)l + " + " + (string)enRPC_ReservedListens() + " > 64)");
         l = 64 - enRPC_ReservedListens();
     }
     list c;
@@ -243,7 +243,7 @@ _enRPC_ListenAll()
         c += [channel];
         integer handle = llListen(llList2Integer(c, -1), "", "", "");
         llListReplaceList(_ENRPC_CLEP, [handle], i * _ENRPC_CLEP_STRIDE + 2, i * _ENRPC_CLEP_STRIDE + 2);
-        enLog_Trace("enCLEP listening on domain \"" + domain + "\" channel " + (string)channel + " handle " + (string)handle);
+        enLog_Trace("Listening on CLEP domain \"" + domain + "\"");
     }
 }
 
@@ -499,10 +499,8 @@ integer _enRPC_Unmarshal(
 
     if (llJsonValueType(json, []) != JSON_OBJECT) return -1; // always object
 
-    string source_region;
-    if (llJsonValueType(json, ["sr"]) != JSON_INVALID) source_region = llJsonGetValue(json, ["sr"]);
-    string target_region;
-    if (llJsonValueType(json, ["tr"]) != JSON_INVALID) target_region = llJsonGetValue(json, ["tr"]);
+    string source_region = enString_JsonTryValue(json, ["sr"]);
+    string target_region = enString_JsonTryValue(json, ["tr"]);
 
     // filter out messages that are targeted to other regions
     #if !defined FEATURE_ENRPC_ALLOW_ALL_TARGET_REGIONS
@@ -512,13 +510,10 @@ integer _enRPC_Unmarshal(
         }
     #endif
 
-    string source_url;
-    if (llJsonValueType(json, ["su"]) != JSON_INVALID) source_url = llJsonGetValue(json, ["su"]);
+    string source_url = enString_JsonTryValue(json, ["su"]);
+    source_prim = enString_JsonTryValueFallback(json, ["sp"], source_prim);
 
-    if (llJsonValueType(json, ["sp"]) != JSON_INVALID) source_prim = llJsonGetValue(json, ["sp"]);
-
-    string target_prim;
-    if (llJsonValueType(json, ["tp"]) != JSON_INVALID) target_prim = llJsonGetValue(json, ["tp"]);
+    string target_prim = enString_JsonTryValue(json, ["tp"]);
 
     // filter out messages that are targeted to other prims
     #if !defined FEATURE_ENRPC_ALLOW_ALL_TARGET_PRIMS
@@ -528,8 +523,8 @@ integer _enRPC_Unmarshal(
         }
     #endif
 
-    string source_script = llJsonGetValue(json, ["ss"]);
-    string target_script = llJsonGetValue(json, ["ts"]);
+    string source_script = enString_JsonTryValue(json, ["ss"]);
+    string target_script = enString_JsonTryValue(json, ["ts"]);
 
     // filter out messages that are targeted to other scripts
     #if defined OVERRIDE_ENRPC_ALLOWED_SOURCE_SCRIPTS
@@ -557,30 +552,21 @@ integer _enRPC_Unmarshal(
         }
     #endif
 
-    string domain;
-    if (llJsonValueType(json, ["d"]) != JSON_INVALID) domain = llJsonGetValue(json, ["d"]);
+    string domain = enString_JsonTryValue(json, ["d"]);
 
-    if (llJsonValueType(json, ["i"]) != JSON_INVALID) int = (integer)llJsonGetValue(json, ["i"]);
+    int = (integer)enString_JsonTryValueFallback(json, ["i"], (string)int);
 
-    string method = llJsonGetValue(json, ["m"]);
+    string method = enString_JsonTryValue(json, ["m"]);
 
-    if (llJsonValueType(json, ["p"]) != JSON_INVALID) params = llJsonGetValue(json, ["p"]);
+    params = enString_JsonTryValueFallback(json, ["p"], params);
 
-    string id;
-    if (llJsonValueType(json, ["id"]) != JSON_INVALID) id = llJsonGetValue(json, ["id"]);
+    string id = enString_JsonTryValue(json, ["id"]);
 
-    string result = JSON_INVALID;
-    if (llJsonValueType(json, ["r"]) != JSON_INVALID) result = llJsonGetValue(json, ["r"]);
+    string result = llJsonValueType(json, ["r"]); // this should be JSON_INVALID if no result
 
-    integer error_code;
-    string error_message = JSON_INVALID;
-    string error_data;
-    if (llJsonValueType(json, ["e"]) != JSON_INVALID)
-    {
-        error_code = (integer)llJsonGetValue(json, ["e", "c"]);
-        error_message = llJsonGetValue(json, ["e", "m"]);
-    }
-    if (llJsonValueType(json, ["e", "c"]) != JSON_INVALID) error_data = llJsonGetValue(json, ["e", "d"]);
+    integer error_code = (integer)enString_JsonTryValue(json, ["e", "c"]);
+    string error_message = enString_JsonTryValue(json, ["e", "m"]);
+    string error_data = enString_JsonTryValue(json, ["e", "d"]);
 
     if (source_link != -1 && domain != OVERRIDE_STRING_ENRPC_LEP_DOMAIN) return 6; // discard message if it doesn't match the domain OVERRIDE_STRING_ENRPC_LEP_DOMAIN and received via link_message
 

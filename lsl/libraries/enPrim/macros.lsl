@@ -41,7 +41,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 
 /*
 Number of PREVIOUS prim UUIDs to store. By default, this is 2 (_ENPRIM_UUIDS_SELF contains current and previous 2 prim UUIDs).
-To disable enPrim_GetMyLast() entirely, set this to 0. Do not do this if you use enCLEP self-domain relistening, enLNX scopes, or anything else that requires UUID monitoring
+To disable enPrim_GetMyLast() entirely, set this to 0. Do not do this if you use self-domain relistening, enLNX scopes, or anything else that requires UUID monitoring
 */
 #if !defined OVERRIDE_ENPRIM_LIMIT_GETMYLAST
     #define OVERRIDE_ENPRIM_LIMIT_GETMYLAST 2
