@@ -20,6 +20,27 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#define CONST_ENRPC_DATA_TIMESTAMP 0
+#define CONST_ENRPC_DATA_SOURCE_REGION 1
+#define CONST_ENRPC_DATA_SOURCE_PRIM 2
+#define CONST_ENRPC_DATA_SOURCE_SCRIPT 3
+#define CONST_ENRPC_DATA_TARGET_SNEP 4
+#define CONST_ENRPC_DATA_TARGET_REGION 5
+#define CONST_ENRPC_DATA_TARGET_PRIM 6
+#define CONST_ENRPC_DATA_TARGET_SCRIPT 7
+#define CONST_ENRPC_DATA_DOMAIN 8
+#define CONST_ENRPC_DATA_INT 9
+#define CONST_ENRPC_DATA_METHOD 10
+#define CONST_ENRPC_DATA_PARAMS 11
+#define CONST_ENRPC_DATA_ID 12
+#define CONST_ENRPC_DATA_RESULT 13
+#define CONST_ENRPC_DATA_ERROR_CODE 14
+#define CONST_ENRPC_DATA_ERROR_MESSAGE 15
+#define CONST_ENRPC_DATA_ERROR_DATA 16
+#define CONST_ENRPC_DATA_SIGNATURE_METHOD 17
+#define CONST_ENRPC_DATA_SIGNATURE_ALGORITHM 18
+#define CONST_ENRPC_DATA_SIGNATURE_HASH 19
+
 // internal flags
 #define FLAG_ENRPC_METHOD_LEP 0x1
 #define FLAG_ENRPC_METHOD_CLEP 0x2
@@ -51,3 +72,6 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #if defined FEATURE_ENRPC_ENABLE_SNEP
     list _ENRPC_HTTP_PARAMETERS;
 #endif
+
+#define enRPC_ListenRemove(domain) \
+    enRPC_Listen(domain, FLAG_ENRPC_LISTEN_REMOVE)
