@@ -256,14 +256,11 @@ string _enRPC_Send(
     string target_prim,
     string target_script,
     string domain,
-    integer int,
     string method,
     string params,
     string id,
-    string result,
-    integer error_code,
-    string error_message,
-    string error_data
+    string e, // "" for request, "0" for successful response, any non-zero integer for error
+    string result // if error, error message
 )
 {
     string timestamp = llGetTimestamp();
@@ -289,14 +286,11 @@ string _enRPC_Send(
         target_prim,
         target_script,
         llReplaceSubString(domain, "\n", "", 0),
-        int,
         llReplaceSubString(method, "\n", "", 0),
         llEscapeURL(params),
         llReplaceSubString(id, "\n", "", 0),
-        llEscapeURL(result),
-        error_code,
-        llEscapeURL(error_message),
-        llEscapeURL(error_data)
+        llReplaceSubString(e, "\n", "", 0),
+        llEscapeURL(result)
     ];
 
     #if defined FEATURE_ENRPC_ENABLE_SIGNING
@@ -407,8 +401,6 @@ integer _enRPC_Unmarshal(
     // unescape llEscapeURL-ed elements
     data = llListReplaceList(data, [llUnescapeURL(llList2String(data, CONST_ENRPC_DATA_PARAMS))], CONST_ENRPC_DATA_PARAMS, CONST_ENRPC_DATA_PARAMS);
     data = llListReplaceList(data, [llUnescapeURL(llList2String(data, CONST_ENRPC_DATA_RESULT))], CONST_ENRPC_DATA_RESULT, CONST_ENRPC_DATA_RESULT);
-    data = llListReplaceList(data, [llUnescapeURL(llList2String(data, CONST_ENRPC_DATA_ERROR_MESSAGE))], CONST_ENRPC_DATA_ERROR_MESSAGE, CONST_ENRPC_DATA_ERROR_MESSAGE);
-    data = llListReplaceList(data, [llUnescapeURL(llList2String(data, CONST_ENRPC_DATA_ERROR_DATA))], CONST_ENRPC_DATA_ERROR_DATA, CONST_ENRPC_DATA_ERROR_DATA);
 
     #if !defined FEATURE_ENRPC_ALLOW_ALL_TARGET_REGIONS
         // filter out messages that are targeted to other regions
@@ -478,8 +470,8 @@ integer _enRPC_Unmarshal(
                     use_key = llList2String(ENRPC_KEYS, index * 2 + 1);
                     if (use_key != "")
                     {
-                        if (signature_method == "RSA") valid = llVerifyRSA(use_key, llDumpList2String(llList2List(data, 0, CONST_ENRPC_DATA_ERROR_DATA), "\n"), llList2String(data, CONST_ENRPC_DATA_SIGNATURE_HASH), llList2String(data, CONST_ENRPC_DATA_SIGNATURE_ALGORITHM));
-                        else valid = (llHMAC(use_key, llDumpList2String(llList2List(data, 0, CONST_ENRPC_DATA_ERROR_DATA), "\n"), llList2String(data, CONST_ENRPC_DATA_SIGNATURE_ALGORITHM)) == llList2String(data, CONST_ENRPC_DATA_SIGNATURE_HASH));
+                        if (signature_method == "RSA") valid = llVerifyRSA(use_key, llDumpList2String(llList2List(data, 0, CONST_ENRPC_DATA_SIGNATURE_METHOD - 1), "\n"), llList2String(data, CONST_ENRPC_DATA_SIGNATURE_HASH), llList2String(data, CONST_ENRPC_DATA_SIGNATURE_ALGORITHM));
+                        else valid = (llHMAC(use_key, llDumpList2String(llList2List(data, 0, CONST_ENRPC_DATA_SIGNATURE_METHOD - 1), "\n"), llList2String(data, CONST_ENRPC_DATA_SIGNATURE_ALGORITHM)) == llList2String(data, CONST_ENRPC_DATA_SIGNATURE_HASH));
                     }
                 }
                 while (!valid && ++index < max);
@@ -494,9 +486,10 @@ integer _enRPC_Unmarshal(
     else if (source_link == -2) flags += FLAG_ENRPC_METHOD_SNEP;
     else flags += FLAG_ENRPC_METHOD_LEP;
 
-    if (llList2String(data, CONST_ENRPC_DATA_RESULT) != "") flags += FLAG_ENRPC_RESULT;
-    if (llList2String(data, CONST_ENRPC_DATA_ERROR_MESSAGE) != "") flags += FLAG_ENRPC_ERROR;
-    if (~flags & (FLAG_ENRPC_RESULT | FLAG_ENRPC_ERROR)) flags += FLAG_ENRPC_REQUEST;
+    string e = llList2String(data, CONST_ENRPC_DATA_E);
+    if (e == "") flags += FLAG_ENRPC_REQUEST;
+    else if (!(integer)e) flags += FLAG_ENRPC_RESULT;
+    else flags += FLAG_ENRPC_ERROR;
 
     #if defined EVENT_ENRPC_MESSAGE && defined TRACE_EVENT_ENRPC_MESSAGE
         enLog_TraceParams(
