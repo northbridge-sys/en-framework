@@ -24,19 +24,22 @@ en_state_entry()
     #if !defined FEATURE_ENRPC_ENABLE_SIGNING && !defined FEATURE_ENRPC_ENABLE_VERIFICATION
         TESTER_KEY_NAME = ""; // use a blank TESTER_KEY_NAME if signing is disabled, otherwise the messages will be dropped
     #endif
+
+    enRPC_Listen(OVERRIDE_STRING_ENRPC_LEP_DOMAIN, FLAG_ENRPC_LISTEN_OWNERONLY);
     
     // return id can be stored for reference later if you want
-    string id = enRPC_LEPRequestSigned(
+    string id = enRPC_HybridRequestSigned(
         TESTER_KEY_NAME, // key_name
-        TESTER_LINK_NUM, // target_link
+        "", // target_region
+        "", // target_prim
         TESTER_TARGET_SCRIPT, // target_script
-        OVERRIDE_STRING_ENRPC_LEP_DOMAIN, // domain
+        OVERRIDE_STRING_ENRPC_LEP_DOMAIN, // domain - we use the LEP domain for convenience here
         "ping", // method
         "{\"start\":\"" + llGetTimestamp() + "\"}", // params
         llGenerateKey() // id
     );
     
-    enLog_Info("Sent LEP ping with ID \"" + id + "\" using key \"" + TESTER_KEY_NAME + "\"");
+    enLog_Info("Sent hybrid ping with ID \"" + id + "\" using key \"" + TESTER_KEY_NAME + "\"");
 }
 
 enrpc_message(
