@@ -497,11 +497,13 @@ integer _enRPC_Unmarshal(
             [
                 "flags",
                 "key_name",
+                "source_link",
                 "data"
             ],
             [
                 enInteger_ElemBitfield(flags),
                 enString_Elem(key_name),
+                source_link,
                 enList_Elem(data)
             ]
         );
