@@ -41,6 +41,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #define FLAG_ENRPC_METHOD_LEP 0x1
 #define FLAG_ENRPC_METHOD_CLEP 0x2
 #define FLAG_ENRPC_METHOD_SNEP 0x4
+#define FLAG_ENRPC_METHOD_RETURN 0x8
 #define FLAG_ENRPC_REQUEST 0x10
 #define FLAG_ENRPC_RESULT 0x20
 #define FLAG_ENRPC_ERROR 0x40
@@ -143,3 +144,23 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 
 #define enRPC_SNEPErrorSigned(key_name, target_request_id, target_prim, target_script, domain, method, params, id, error_code, error_message) \
     _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, key_name, llGetScriptName(), target_request_id, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
+
+// note: target_prim may be target_link typecast to string for all enRPC_Generate*() macros
+
+#define enRPC_GenerateRequest(target_region, target_prim, target_script, domain, method, params, id) \
+    _enRPC_Send(FLAG_ENRPC_METHOD_RETURN, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
+
+#define enRPC_GenerateRequestSigned(key_name, target_region, target_prim, target_script, domain, method, params, id) \
+    _enRPC_Send(FLAG_ENRPC_METHOD_RETURN, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
+
+#define enRPC_GenerateResult(target_region, target_prim, target_script, domain, method, params, id, result) \
+    _enRPC_Send(FLAG_ENRPC_METHOD_RETURN, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
+
+#define enRPC_GenerateResultSigned(key_name, target_region, target_prim, target_script, domain, method, params, id, result) \
+    _enRPC_Send(FLAG_ENRPC_METHOD_RETURN, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
+
+#define enRPC_GenerateError(target_region, target_prim, target_script, domain, method, params, id, error_code, error_message) \
+    _enRPC_Send(FLAG_ENRPC_METHOD_RETURN, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
+
+#define enRPC_GenerateErrorSigned(key_name, target_region, target_prim, target_script, domain, method, params, id, error_code, error_message) \
+    _enRPC_Send(FLAG_ENRPC_METHOD_RETURN, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)

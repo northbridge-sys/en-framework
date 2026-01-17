@@ -373,6 +373,9 @@ string _enRPC_Send(
         }
     #endif
 
+    if (flags & FLAG_ENRPC_METHOD_RETURN) // return data directly from function instead of sending it
+        return llDumpList2String(data, "\n");
+
     return id;
 }
 
