@@ -1,6 +1,4 @@
 /*
-ManageLoglevel.lsl
-Utility Script
 En LSL Framework
 Copyright (C) 2024  Northbridge Business Systems
 https://docs.northbridgesys.com/en-framework

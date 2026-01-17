@@ -1,6 +1,4 @@
 /*
-LEPTap.lsl
-Utility Script
 En LSL Framework
 Copyright (C) 2024-25  Northbridge Business Systems
 https://docs.northbridgesys.com/en-framework
@@ -32,7 +30,7 @@ this prim.
 #define FEATURE_ENRPC_ALLOW_ALL_TARGET_SCRIPTS
 #define OVERRIDE_ENLOG_DEFAULT_LOGLEVEL 6
 
-#define TRACE_ENRPC_MESSAGE
+#define TRACE_EVENT_ENRPC_MESSAGE
 
 #include "northbridge-sys/en-framework/lsl/libraries.lsl"
 
