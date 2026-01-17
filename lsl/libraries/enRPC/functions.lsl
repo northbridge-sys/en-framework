@@ -272,6 +272,10 @@ string _enRPC_Send(
             target_link = (integer)target_prim;
             target_prim = llGetLinkKey(target_link);
         }
+        if (enKey_IsNotNull(target_prim))
+        { // target_prim was specified as a UUID, so we need to translate it to target_link if possible
+            if (enPrim_SameRoot(prim)) target_link = enPrim_GetLinkNumber(target_prim);
+        }
         if (!target_link) target_link = OVERRIDE_INTEGER_ENRPC_LINK_MESSAGE_SCOPE;
     }
 
