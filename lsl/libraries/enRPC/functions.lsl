@@ -251,8 +251,7 @@ string _enRPC_Send(
     integer flags, // internal flags
     string key_name,
     string source_script,
-    string target_snep, // target_request_id (response to inbound HTTP request), target_url (request to general HTTP server), relay_url (request to SNEP relay)
-    string target_region,
+    string target_selector, // LEP: ignored / CLEP: target_region / SNEP: target_request_id (response to inbound HTTP request), target_url (request to general HTTP server), relay_url (request to SNEP relay)
     string target_prim,
     string target_script,
     string domain,
@@ -281,8 +280,7 @@ string _enRPC_Send(
         enString_If(flags & FLAG_ENRPC_METHOD_CLEP, llGetRegionName(), ""),
         llGetKey(),
         source_script,
-        llReplaceSubString(target_snep, "\n", "", 0),
-        enString_If(flags & FLAG_ENRPC_METHOD_CLEP, target_region, ""),
+        llReplaceSubString(target_selector, "\n", "", 0),
         target_prim,
         target_script,
         llReplaceSubString(domain, "\n", "", 0),
@@ -311,7 +309,7 @@ string _enRPC_Send(
                 data += [
                     "HMAC",
                     OVERRIDE_STRING_ENRPC_HMAC_ALGORITHM,
-                    llHMAC(private_key, llDumpList2String(data, "\n"), OVERRIDE_STRING_ENRPC_RSA_ALGORITHM)
+                    llHMAC(private_key, llDumpList2String(data, "\n"), OVERRIDE_STRING_ENRPC_HMAC_ALGORITHM)
                 ];
         }
     #endif
@@ -350,19 +348,19 @@ string _enRPC_Send(
     #if defined FEATURE_ENRPC_ENABLE_SNEP
         if (flags & FLAG_ENRPC_METHOD_SNEP)
         {
-            if (enKey_IsNotNull(target_snep))
-            { // target_snep is a UUID; we are responding to a previous inbound HTTP request
+            if (enKey_IsNotNull(target_selector))
+            { // target_selector is a UUID; we are responding to a previous inbound HTTP request
                 llHTTPResponse(
-                    target_snep, // pass target_snep as request ID
+                    target_selector, // pass target_selector as request ID
                     200,
                     llDumpList2String(data, "\n")
                 );
             }
             else
             {
-                // target_snep is probably a URL; we are requesting via a new outbound HTTP request
+                // target_selector is probably a URL; we are requesting via a new outbound HTTP request
                 id = llHTTPRequest(
-                    target_snep,
+                    target_selector,
                     _ENRPC_HTTP_PARAMETERS,
                     llDumpList2String(data, "\n")
                 );
@@ -398,13 +396,9 @@ integer _enRPC_Unmarshal(
 
     list data = llParseStringKeepNulls(s_data, ["\n"], []);
 
-    // unescape llEscapeURL-ed elements
-    data = llListReplaceList(data, [llUnescapeURL(llList2String(data, CONST_ENRPC_DATA_PARAMS))], CONST_ENRPC_DATA_PARAMS, CONST_ENRPC_DATA_PARAMS);
-    data = llListReplaceList(data, [llUnescapeURL(llList2String(data, CONST_ENRPC_DATA_RESULT))], CONST_ENRPC_DATA_RESULT, CONST_ENRPC_DATA_RESULT);
-
     #if !defined FEATURE_ENRPC_ALLOW_ALL_TARGET_REGIONS
         // filter out messages that are targeted to other regions
-        string target_region = llList2String(data, CONST_ENRPC_DATA_TARGET_REGION);
+        string target_region = llList2String(data, CONST_ENRPC_DATA_TARGET_SELECTOR);
         if (target_region != "")
         {
             if (target_region != llGetRegionName()) return 0x1; // not targeted to this region
@@ -448,7 +442,7 @@ integer _enRPC_Unmarshal(
         }
     #endif
 
-    if (source_link != -1 && llList2String(data, CONST_ENRPC_DATA_DOMAIN) != OVERRIDE_STRING_ENRPC_LEP_DOMAIN) return 0x6; // discard message if it doesn't match the domain OVERRIDE_STRING_ENRPC_LEP_DOMAIN and received via link_message
+    if (source_link > -1 && llList2String(data, CONST_ENRPC_DATA_DOMAIN) != OVERRIDE_STRING_ENRPC_LEP_DOMAIN) return 0x6; // discard message if it doesn't match the domain OVERRIDE_STRING_ENRPC_LEP_DOMAIN and received via link_message
 
     string key_name;
 
@@ -470,8 +464,10 @@ integer _enRPC_Unmarshal(
                     use_key = llList2String(ENRPC_KEYS, index * 2 + 1);
                     if (use_key != "")
                     {
-                        if (signature_method == "RSA") valid = llVerifyRSA(use_key, llDumpList2String(llList2List(data, 0, CONST_ENRPC_DATA_SIGNATURE_METHOD - 1), "\n"), llList2String(data, CONST_ENRPC_DATA_SIGNATURE_HASH), llList2String(data, CONST_ENRPC_DATA_SIGNATURE_ALGORITHM));
-                        else valid = (llHMAC(use_key, llDumpList2String(llList2List(data, 0, CONST_ENRPC_DATA_SIGNATURE_METHOD - 1), "\n"), llList2String(data, CONST_ENRPC_DATA_SIGNATURE_ALGORITHM)) == llList2String(data, CONST_ENRPC_DATA_SIGNATURE_HASH));
+                        if (signature_method == "RSA")
+                            valid = llVerifyRSA(use_key, llDumpList2String(llList2List(data, 0, CONST_ENRPC_DATA_SIGNATURE_METHOD - 1), "\n"), llList2String(data, CONST_ENRPC_DATA_SIGNATURE_HASH), llList2String(data, CONST_ENRPC_DATA_SIGNATURE_ALGORITHM));
+                        else
+                            valid = (llHMAC(use_key, llDumpList2String(llList2List(data, 0, CONST_ENRPC_DATA_SIGNATURE_METHOD - 1), "\n"), llList2String(data, CONST_ENRPC_DATA_SIGNATURE_ALGORITHM)) == llList2String(data, CONST_ENRPC_DATA_SIGNATURE_HASH));
                     }
                 }
                 while (!valid && ++index < max);
@@ -480,6 +476,10 @@ integer _enRPC_Unmarshal(
             }
         }
     #endif
+
+    // unescape llEscapeURL-ed elements
+    data = llListReplaceList(data, [llUnescapeURL(llList2String(data, CONST_ENRPC_DATA_PARAMS))], CONST_ENRPC_DATA_PARAMS, CONST_ENRPC_DATA_PARAMS);
+    data = llListReplaceList(data, [llUnescapeURL(llList2String(data, CONST_ENRPC_DATA_RESULT))], CONST_ENRPC_DATA_RESULT, CONST_ENRPC_DATA_RESULT);
 
     integer flags;
     if (source_link == -1) flags += FLAG_ENRPC_METHOD_CLEP;
@@ -510,6 +510,7 @@ integer _enRPC_Unmarshal(
         enrpc_message(
             flags,
             key_name,
+            source_link,
             data
         );
     #endif

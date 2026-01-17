@@ -321,8 +321,7 @@ integer enString_UTF16Bytes(
 sends llOwnerSay, splitting it up into multiple lines for messages over 1024 bytes
 WARNING: this is VERY SLOW! it should only be used for reading very large strings while debugging
 note that this uses UTF-16 assuming you are using the mono VM!
-if you're using LSO/Luau, it should still work, except for code points U+8000 to U+FFFF, which are 3 bytes each in UTF-8
-i'll worry about it once Luau actually supports includes
+if you're using LSO or SLua cross-compilation, it should still work, except for code points U+8000 to U+FFFF, which are 3 bytes each in UTF-8
 */
 enString_SlownerSay(
     string s
