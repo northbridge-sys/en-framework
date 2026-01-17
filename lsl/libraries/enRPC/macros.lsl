@@ -108,6 +108,24 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #define enRPC_CLEPErrorSigned(key_name, target_region, target_prim, target_script, domain, method, params, id, error_code, error_message) \
     _enRPC_Send(FLAG_ENRPC_METHOD_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
 
+#define enRPC_HybridRequest(target_region, target_prim, target_script, domain, method, params, id) \
+    _enRPC_Send(FLAG_ENRPC_METHOD_LEP | FLAG_ENRPC_METHOD_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
+
+#define enRPC_HybridRequestSigned(key_name, target_region, target_prim, target_script, domain, method, params, id) \
+    _enRPC_Send(FLAG_ENRPC_METHOD_LEP | FLAG_ENRPC_METHOD_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
+
+#define enRPC_HybridResult(target_region, target_prim, target_script, domain, method, params, id, result) \
+    _enRPC_Send(FLAG_ENRPC_METHOD_LEP | FLAG_ENRPC_METHOD_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
+
+#define enRPC_HybridResultSigned(key_name, target_region, target_prim, target_script, domain, method, params, id, result) \
+    _enRPC_Send(FLAG_ENRPC_METHOD_LEP | FLAG_ENRPC_METHOD_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
+
+#define enRPC_HybridError(target_region, target_prim, target_script, domain, method, params, id, error_code, error_message) \
+    _enRPC_Send(FLAG_ENRPC_METHOD_LEP | FLAG_ENRPC_METHOD_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
+
+#define enRPC_HybridErrorSigned(key_name, target_region, target_prim, target_script, domain, method, params, id, error_code, error_message) \
+    _enRPC_Send(FLAG_ENRPC_METHOD_LEP | FLAG_ENRPC_METHOD_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
+
 #define enRPC_SNEPRequest(target_url, target_prim, target_script, domain, method, params, id) \
     _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, "", llGetScriptName(), target_url, target_prim, target_script, domain, method, params, id, "", "")
 
