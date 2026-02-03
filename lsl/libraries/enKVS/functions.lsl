@@ -22,6 +22,13 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// DO NOT EDIT THIS LINE - LIBRARY CROSS-LOADER
+#include "northbridge-sys/en-framework/lsl/libraries.lsl"
+
+// these are done as separate lists for speed, the memory difference is negligible
+list _ENKVS_NAMES;
+list _ENKVS_DATA;
+
 //  checks if a KVS pair exists by name
 integer enKVS_Exists(list name)
 {

@@ -4,6 +4,9 @@ Copyright (C) 2025  Northbridge Business Systems
 https://docs.northbridgesys.com/en-framework
 */
 
+// DO NOT EDIT THIS LINE - LIBRARY CROSS-LOADER
+#include "northbridge-sys/en-framework/lsl/libraries.lsl"
+
 /*!
 Adds a number of milliseconds to an enDatetime millisec integer to safely wrap milliseconds at the ends of a month.
 @param integer ms Millisec. See enDatetime_NowToMillisec() or enDatetime_TimestampToMillisec().
@@ -122,7 +125,7 @@ string enDatetime_HMSToPretty(
 {
     hms = _enDatetime_HTo12(hms, flags);
     hms = _enDatetime_PadZeroesHMS(hms, flags);
-    return llList2String(hms, 0) + ":" + llList2String(hms, 1) + ":" + llList2String(hms, 2) + xm;
+    return llList2String(hms, 0) + ":" + llList2String(hms, 1) + ":" + llList2String(hms, 2) + " " + llList2String(hms, 3);
 }
 
 /*!
@@ -139,7 +142,7 @@ string enDatetime_HMSUToPretty(
 )
 {
     hmsu = _enDatetime_PadZeroesHMS(hmsu, flags);
-    string o = llList2String(hmsu, 0) + ":" + llList2String(hmsu, 1) + ":" + llList2String(hmsu, 2) + _enDatetime_DecimalizeSubseconds((integer)llList2String(hmsu, 3), FALSE);
+    return llList2String(hmsu, 0) + ":" + llList2String(hmsu, 1) + ":" + llList2String(hmsu, 2) + _enDatetime_DecimalizeSubseconds((integer)llList2String(hmsu, 3), FALSE);
 }
 
 /*!
@@ -330,7 +333,7 @@ Converts YMDHMSU list to ISO 8601 timestamp.
 @param list ymdhmsu [Y, M, D, h, m, s, u].
 @return string ISO 8601 timestamp.
 */
-integer enDatetime_YMDHMSUToTimestamp(
+string enDatetime_YMDHMSUToTimestamp(
     list ymdhmsu
 )
 {
@@ -367,27 +370,30 @@ string enDatetime_YMDToPretty(
     if (flags & (FLAG_ENDATETIME_TEXT_DMY | FLAG_ENDATETIME_TEXT_MDY))
     {
         // generate month
-        if (flags & FLAG_ENDATETIME_TEXT_SHORT)
+        if (flags & FLAG_ENDATETIME_TEXT_MONTH_SHORT)
         { // we need a short month ("Jan")
             m = enDatetime_MToPrettyShort(llList2Integer(ymd, 1));
-            if (flags & FLAG_ENDATETIME_TEXT_SHORT_DOT) m += "."; // we need to add a dot ("Jan.")
+            if (flags & FLAG_ENDATETIME_TEXT_MONTH_SHORT_DOT) m += "."; // we need to add a dot ("Jan.")
         }
         else m = enDatetime_MToPretty(llList2Integer(ymd, 1)); // we need a full month ("January")
 
         // generate day
         integer i_d = llList2Integer(ymd, 2);
         d = (integer)d; // start with raw digit ("1")
-        if (flags & FLAG_ENDATETIME_TEXT_ORDINAL) d += enInteger_Ordinal(i_d); // we need to add an ordinal ("1st")
-        if (flags & (FLAG_ENDATETIME_TEXT_DMY | FLAG_ENDATETIME_TEXT_OF)) d += " of";
+        if (flags & FLAG_ENDATETIME_TEXT_DAY_ORDINAL) d += enInteger_Ordinal(i_d); // we need to add an ordinal ("1st")
+        if (flags & (FLAG_ENDATETIME_TEXT_DMY | FLAG_ENDATETIME_TEXT_DAY_OF)) d += " of";
     }
 
     // textual representation of date in DD Mmm YYYY
     if (flags & FLAG_ENDATETIME_TEXT_DMY)
-        return d + " " + m + " " + llList2Integer(ymd, 0);
+        return d + " " + m + " " + llList2String(ymd, 0);
 
     // textual representation of date in Mmm DD, YYYY
     if (flags & FLAG_ENDATETIME_TEXT_MDY)
-        return m + " " + d + ", " + llList2Integer(ymd, 0);
+        return m + " " + d + ", " + llList2String(ymd, 0);
+    
+    // default - textual representation of date in YYYY-MM-DD with no changes
+    return llList2String(ymd, 0) + "-" + enString_PadZeroes(m, 2) + "-" + enString_PadZeroes(d, 2);
 }
 
 string _enDatetime_DecimalizeSubseconds(

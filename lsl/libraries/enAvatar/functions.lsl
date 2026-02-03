@@ -22,7 +22,10 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-string enAvatar_Elem( string id )
+// DO NOT EDIT THIS LINE - LIBRARY CROSS-LOADER
+#include "northbridge-sys/en-framework/lsl/libraries.lsl"
+
+string enAvatar_Elem(string id)
 {
     return "\"" + id + "\" (secondlife:///app/agent/" + id + "/username)";
 }
@@ -31,9 +34,9 @@ string enAvatar_GetGroup(
     string id
 )
 {
-    list attaches = llGetAttachedList(id);
+    list attaches = llGetAttachedList((key)id);
     string group = NULL_KEY;
     string first = llList2String(attaches, 0);
-    if (attaches != [] && first != "NOT ON REGION" && first != "NOT FOUND") group = llList2String(llGetObjectDetails(llList2String(attaches, 0), [OBJECT_GROUP]), 0);
+    if (attaches != [] && first != "NOT ON REGION" && first != "NOT FOUND") group = llList2String(llGetObjectDetails((key)llList2String(attaches, 0), [OBJECT_GROUP]), 0);
     return group;
 }

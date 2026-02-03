@@ -22,6 +22,16 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// DO NOT EDIT THIS LINE - LIBRARY CROSS-LOADER
+#include "northbridge-sys/en-framework/lsl/libraries.lsl"
+
+string _ENINVENTORY_NC_N; // notecard name
+string _ENINVENTORY_NC_K; // notecard key
+integer _ENINVENTORY_NC_L = -1; // notecard line being read
+integer _ENINVENTORY_NC_T = -1; // notecard total lines
+string _ENINVENTORY_NC_H; // notecard read handle
+string _ENINVENTORY_NC_G; // llGetNumberOfNotecardLines handle
+
 list enInventory_List(
     integer t
     )
@@ -61,8 +71,8 @@ integer enInventory_Copy(
     if (t == INVENTORY_NONE) return 0; // can't push anything
     integer p = llGetInventoryPermMask(name, MASK_OWNER);
     if (!(p & PERM_COPY)) return 0; // can't push a no-copy inventory item
-    if (t == INVENTORY_SCRIPT && pin) llRemoteLoadScriptPin(prim, name, pin, run, param);
-    else llGiveInventory(prim, name);
+    if (t == INVENTORY_SCRIPT && pin) llRemoteLoadScriptPin((key)prim, name, pin, run, param);
+    else llGiveInventory((key)prim, name);
     return 1;
 }
 
@@ -138,7 +148,9 @@ integer enInventory_NCParse(
 {
     if (query == _ENINVENTORY_NC_H)
     {
-        eninventory_nc_line(_ENINVENTORY_NC_N, _ENINVENTORY_NC_L, _ENINVENTORY_NC_T, data);
+        #if defined EVENT_ENINVENTORY_NC_LINE
+            eninventory_nc_line(_ENINVENTORY_NC_N, _ENINVENTORY_NC_L, _ENINVENTORY_NC_T, data);
+        #endif
         return 1;
     }
     if (query == _ENINVENTORY_NC_G)

@@ -20,6 +20,18 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// DO NOT EDIT THIS LINE - LIBRARY CROSS-LOADER
+#include "northbridge-sys/en-framework/lsl/libraries.lsl"
+
+list _ENRPC_HTTP_PARAMETERS;
+list _ENRPC_CLEP; // domain, flags, handle
+#define _ENRPC_CLEP_STRIDE 3
+// used by enRPC_DialogListen()
+integer _ENRPC_DIALOG_LSN;
+
+#if !defined OVERRIDE_ENRPC_KEYS
+    list ENRPC_KEYS; // only create an empty ENRPC_KEYS if OVERRIDE_ENRPC_KEYS is not defined (and ENRPC_KEYS defined as global)
+#endif
 
 /*!
 An external loader for HTTP parameters is needed to simplify _enRPC_Send(), since lists don't work with the preprocessor.
@@ -129,7 +141,7 @@ enRPC_DialogListen()
     _enRPC_UnListenAll();
     if (_ENRPC_DIALOG_LSN) llListenRemove(_ENRPC_DIALOG_LSN);
     integer channel = enRPC_DialogChannel();
-    _ENRPC_DIALOG_LSN = llListen(channel, "", "", "");
+    _ENRPC_DIALOG_LSN = llListen(channel, "", (key)"", "");
     enLog_Trace("Dialog listening on channel " + (string)channel + " handle " + (string)_ENRPC_DIALOG_LSN);
     _enRPC_ListenAll();
 }
@@ -237,8 +249,8 @@ _enRPC_ListenAll()
         string domain = llList2String(_ENRPC_CLEP, i * _ENRPC_CLEP_STRIDE);
         integer channel = enRPC_Channel(domain);
         c += [channel];
-        integer handle = llListen(llList2Integer(c, -1), "", "", "");
-        llListReplaceList(_ENRPC_CLEP, [handle], i * _ENRPC_CLEP_STRIDE + 2, i * _ENRPC_CLEP_STRIDE + 2);
+        integer handle = llListen(llList2Integer(c, -1), "", (key)"", "");
+        _ENRPC_CLEP = llListReplaceList(_ENRPC_CLEP, [handle], i * _ENRPC_CLEP_STRIDE + 2, i * _ENRPC_CLEP_STRIDE + 2);
         enLog_Trace("Listening on CLEP domain \"" + domain + "\"");
     }
 }

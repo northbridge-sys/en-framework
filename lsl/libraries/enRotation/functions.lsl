@@ -22,6 +22,9 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// DO NOT EDIT THIS LINE - LIBRARY CROSS-LOADER
+#include "northbridge-sys/en-framework/lsl/libraries.lsl"
+
 string enRotation_Elem( rotation r )
 {
     return (string)r + " (" + (string)llRot2Euler( r ) + " -> " + (string)(llRot2Euler( r ) * RAD_TO_DEG) + ")";
@@ -78,7 +81,7 @@ rotation enRotation_Decompress(
 }
 
 //  converts a string to a rotation while being a little loose with what counts as a rotation (all spaces removed, brackets optional, automatic translation from vector)
-vector enRotation_FromString(
+rotation enRotation_FromString(
     string s,
     integer use_degrees // set TRUE if you want llEuler2Rot translation to presume a vector in degrees instead of radians
 )

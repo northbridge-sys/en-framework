@@ -47,13 +47,6 @@ To disable enPrim_GetMyLast() entirely, set this to 0. Do not do this if you use
     #define OVERRIDE_ENPRIM_LIMIT_GETMYLAST 2
 #endif
 
-list _ENPRIM_UUIDS_SELF;
-
-#if defined FEATURE_ENPRIM_ENABLE_LINK_CACHE
-    list _ENPRIM_LINK_CACHE; // prim name, current linknum, max distance
-    #define _ENPRIM_LINK_CACHE_STRIDE 3
-#endif
-
 #define enPrim_GetLastOwner(prim) \
     llList2String(llGetObjectDetails(prim, [OBJECT_LAST_OWNER_ID]), 0)
 

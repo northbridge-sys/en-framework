@@ -22,6 +22,9 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// DO NOT EDIT THIS LINE - LIBRARY CROSS-LOADER
+#include "northbridge-sys/en-framework/lsl/libraries.lsl"
+
 enLog_To(
     integer level,
     integer line,
@@ -46,7 +49,7 @@ enLog_To(
             ], level) + message;
         if ((integer)llLinksetDataRead("logsay")) llSay((integer)llLinksetDataRead("logchannel"), message); // always check logsay for last-resort llSay logging
         if (target == "") llOwnerSay(message); // target to owner
-        else llRegionSayTo(target, 0, message); // log to specific user
+        else llRegionSayTo((key)target, 0, message); // log to specific user
     }
     #if defined FEATURE_ENLOG_ENABLE_LOGTARGET
         string t = enLog_GetLogtarget();
@@ -213,7 +216,7 @@ enLog_Vars(
     list var_values
     )
 {
-    enLog_Params(level, "", var_names, var_values);
+    enLog_ParamsResult(level, "", var_names, var_values, "");
 }
 
 enLog_TraceVars(
