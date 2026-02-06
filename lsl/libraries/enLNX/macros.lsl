@@ -31,9 +31,6 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 
 #define FLAG_ENLNX_DELETE_CHILDREN 0x80000000
 
-// used to detect script name changes
-string _ENLNX_SCRIPT_NAME;
-
 #define enLNX_Head(flags) \
     _enLNX_BuildHead(flags, llGetScriptName(), llGetKey())
 

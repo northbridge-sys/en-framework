@@ -22,6 +22,29 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+
+list _ENTIMER_QUEUE;
+
+#if defined FEATURE_ENTIMER_DISABLE_MULTIPLE
+    // id, callback, length
+    #define _ENTIMER_QUEUE_STRIDE 3
+#else
+    // id, callback, length, trigger
+    #define _ENTIMER_QUEUE_STRIDE 4
+#endif
+
+/*
+FEATURE_ENTIMER_ENABLE_PREEMPTION is required to enable "preemption" mode, which exposes
+the enTimer_SetPreempt accessor function. If enTimer_SetPreempt(1) is called,
+all future timer events will skip the slow enTimer_Check call and, in
+combination with EVENT_EN_TIMER, pass the timer event directly to en_timer.
+
+This is useful for scripts that need to temporarily process high-frequency timer
+events and can tolerate delaying enTimer triggers until enTimer_SetPreempt(0) is
+called.
+*/
+integer _ENTIMER_PREEMPT;
+
 //  clears enTimer timers
 enTimer_Reset()
 {
@@ -168,22 +191,24 @@ _entimer_timer()
 
                 // internal loopbacks
                 if (t_callback == "enPrim_TextClear") enPrim_TextClear();
-                else
-                {
-                    #if defined EVENT_ENTIMER_TIMER
-                        triggers += [t_id, t_callback, t_length, t_trigger];
-                    #endif
-                }
+                #if defined EVENT_ENTIMER_TIMER
+                    else triggers += [t_id, t_callback, t_length, t_trigger];
+                #endif
             }
             else if ( remain < lowest ) lowest = remain; // timer not triggered, but it is currently the next timer to trigger
         }
         if ( lowest != 0x7FFFFFFF )
         { // a timer is still in the queue
             llSetTimerEvent( lowest * 0.001 );
-            #if defined TRACE_ENTIMER
+    #endif
+            #if !defined FEATURE_ENTIMER_DISABLE_MULTIPLE && defined TRACE_ENTIMER
                 enLog_Trace("enTimer llSetTimerEvent(" + (string)(lowest * 0.001) + ")");
             #endif
+    #if !defined FEATURE_ENTIMER_DISABLE_MULTIPLE
         }
+    #endif
+        
+    #if !defined FEATURE_ENTIMER_DISABLE_MULTIPLE && defined EVENT_ENTIMER_TIMER
         /*
         entimer_timer calls need to be made AFTER the next timer is scheduled, because otherwise there is an ordering problem
         if code that runs in entimer_timer re-calls enTimer_Start, it will modify the enTimer queue and schedule the next timer

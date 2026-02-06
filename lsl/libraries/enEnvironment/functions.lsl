@@ -22,6 +22,7 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+
 float enEnvironment_SunHeight(vector p)
 {
     p = (vector)llList2String(llGetEnvironment(p, [SKY_SUN]), 4);

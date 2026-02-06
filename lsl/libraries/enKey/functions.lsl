@@ -22,6 +22,7 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+
 //  returns 1 if is a valid key (INCLUDING NULL_KEY, unlike the regular if (key) conditional check)
 integer enKey_Is(
     string k
@@ -54,7 +55,7 @@ integer enKey_IsAvatarInRegion(
     string k
 )
 {
-    return llGetAgentSize() != ZERO_VECTOR;
+    return llGetAgentSize((key)k) != ZERO_VECTOR;
 }
 
 //  returns 1 if a valid prim key IN THIS REGION
@@ -62,7 +63,7 @@ integer enKey_IsPrimInRegion(
     string k
     )
 {
-    list d = llGetObjectDetails( k, [ OBJECT_OWNER ] );
+    list d = llGetObjectDetails( (key)k, [ OBJECT_OWNER ] );
     if ( d == [] ) return 0; // not in region
     if ( llList2String( d, 0 ) == llToLower( k ) ) return 0; // is an avatar
     return 1; // must be a prim

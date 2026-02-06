@@ -22,19 +22,25 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+
+list _ENPRIM_UUIDS_SELF;
+
+list _ENPRIM_LINK_CACHE; // prim name, current linknum, max distance
+#define _ENPRIM_LINK_CACHE_STRIDE 3
+
 string enPrim_Elem( string id )
 {
-    list details = llGetObjectDetails( id, [ OBJECT_NAME, OBJECT_POS ] );
+    list details = llGetObjectDetails( (key)id, [ OBJECT_NAME, OBJECT_POS ] );
     if ( details == [] ) return "\"" + id + "\" (not in region)";
     return "\"" + id + "\" (\"" + llList2String( details, 0 ) + "\" at " + enVector_ToString( (vector)llList2String( details, 1 ), 3 ) + ")";
 }
 
 //  returns the linknum of a specified UUID if it is part of the same linkset, or -1 if it is not
-string enPrim_RelativeLinknum(
+integer enPrim_RelativeLinknum(
     string prim
 )
 {
-    list l = llGetObjectDetails(prim, [OBJECT_LINK_NUMBER]); // first, attempt to get the linknum of the prim within its linkset
+    list l = llGetObjectDetails((key)prim, [OBJECT_LINK_NUMBER]); // first, attempt to get the linknum of the prim within its linkset
     if (l == []) return -1; // prim doesn't exist
     if (llGetLinkKey((integer)llList2String(l, 0)) == prim) return (integer)llList2String(l, 0); // if the UUID of the linknum within our OWN linkset matches the one passed in, it is part of our linkset
     return -1; // otherwise, it is not part of our linkset
@@ -255,7 +261,7 @@ integer enPrim_Profile(
     string k
     )
 {
-    list l = llGetObjectDetails(k, [OBJECT_PHYSICS, OBJECT_PHANTOM, OBJECT_TEMP_ON_REZ, OBJECT_TEMP_ATTACHED]);
+    list l = llGetObjectDetails((key)k, [OBJECT_PHYSICS, OBJECT_PHANTOM, OBJECT_TEMP_ON_REZ, OBJECT_TEMP_ATTACHED]);
     if (l == []) return 0;
     integer f = FLAG_ENPRIM_PROFILE_EXISTS;
     if ((integer)llList2String(l, 0)) f += FLAG_ENPRIM_PROFILE_PHYSICS;
@@ -304,9 +310,10 @@ enPrim_AlwaysPhantom()
 
 /*
 detects the VM
+see FLAG_ENPRIM_VM_*
 courtesy of Pedro Oval via the LSL Portal
 */
-enPrim_VM()
+integer enPrim_VM()
 {
     return ("" != "x");
 }
@@ -351,7 +358,9 @@ _enPrim_changed(
     integer change
 )
 {
-    #if defined EVENT_ENCLEP_RPC_REQUEST || defined EVENT_ENCLEP_RPC_ERROR || defined EVENT_ENCLEP_RPC_RESULT || defined FEATURE_ENLNX_ENABLE_SCOPE || OVERRIDE_ENPRIM_LIMIT_GETMYLAST > 0
+    1;
+    
+    #if defined EVENT_ENCLEP_RPC_REQUEST || defined EVENT_ENCLEP_RPC_ERROR || defined EVENT_ENCLEP_RPC_RESULT || defined FEATURE_ENLNX_ENABLE_SCOPE
         enPrim_UpdateUUIDs();
     #endif
 
@@ -379,7 +388,7 @@ _enPrim_on_rez(
     #endif
 
     // update _ENPRIM_UUIDS_SELF
-    #if defined EVENT_ENCLEP_RPC_REQUEST || defined EVENT_ENCLEP_RPC_ERROR || defined EVENT_ENCLEP_RPC_RESULT || defined FEATURE_ENLNX_ENABLE_SCOPE || OVERRIDE_ENPRIM_LIMIT_GETMYLAST > 0
+    #if defined EVENT_ENCLEP_RPC_REQUEST || defined EVENT_ENCLEP_RPC_ERROR || defined EVENT_ENCLEP_RPC_RESULT || defined FEATURE_ENLNX_ENABLE_SCOPE
         enPrim_UpdateUUIDs();
     #endif
 }
@@ -397,7 +406,7 @@ _enPrim_state_entry()
     #endif
 
     // update _ENPRIM_UUIDS_SELF if needed
-    #if defined EVENT_ENCLEP_RPC_REQUEST || defined EVENT_ENCLEP_RPC_ERROR || defined EVENT_ENCLEP_RPC_RESULT || defined FEATURE_ENLNX_ENABLE_SCOPE || OVERRIDE_ENPRIM_LIMIT_GETMYLAST > 0
+    #if defined EVENT_ENCLEP_RPC_REQUEST || defined EVENT_ENCLEP_RPC_ERROR || defined EVENT_ENCLEP_RPC_RESULT || defined FEATURE_ENLNX_ENABLE_SCOPE
         enPrim_UpdateUUIDs();
     #endif
 

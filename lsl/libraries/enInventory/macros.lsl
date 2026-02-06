@@ -58,12 +58,5 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
     #define OVERRIDE_ENINVENTORY_NC_MEMORY_BUFFER 8192
 #endif
 
-string _ENINVENTORY_NC_N; // notecard name
-string _ENINVENTORY_NC_K; // notecard key
-integer _ENINVENTORY_NC_L = -1; // notecard line being read
-integer _ENINVENTORY_NC_T = -1; // notecard total lines
-string _ENINVENTORY_NC_H; // notecard read handle
-string _ENINVENTORY_NC_G; // llGetNumberOfNotecardLines handle
-
 #define enInventory_NCOpenedName() _ENINVENTORY_NC_N
 #define enInventory_NCOpenedKey() _ENINVENTORY_NC_K

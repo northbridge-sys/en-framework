@@ -22,6 +22,7 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+
 /*
 utility function for safely reading private globals as macro getters
 when a getter macro is returned like so:
@@ -296,8 +297,8 @@ integer enString_Bytes(
     string s
 )
 {
-    if (enPrim_VM() == FLAG_ENPRIM_VM_MONO) return enString_UTF16Bytes(); // mono uses UTF-16 strings
-    return enString_UTF8Bytes(); // LSO/Lua uses UTF-8 strings (faster to measure)
+    if (enPrim_VM() == FLAG_ENPRIM_VM_MONO) return enString_UTF16Bytes(s); // mono uses UTF-16 strings
+    return enString_UTF8Bytes(s); // LSO/Lua uses UTF-8 strings (faster to measure)
 }
 
 /*
@@ -311,6 +312,7 @@ integer enString_UTF16Bytes(
     integer b;
     // iterate through each character in the string and figure out how many bytes it would be in UTF-16
     // if any bits above 0xFFFF are true, we are outside the UTF-16 2-byte range, so 4 bytes
+    integer i;
     integer l = llStringLength(s);
     for (i = 0; i < l; i++)
         b += 2 + 2 * !!(llOrd(s, i) & 0xFFFF0000);

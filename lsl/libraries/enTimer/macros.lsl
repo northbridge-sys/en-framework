@@ -32,25 +32,3 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #if defined TRACE_EN
     #define TRACE_ENTIMER
 #endif
-
-#if defined FEATURE_ENTIMER_DISABLE_MULTIPLE
-    list _ENTIMER_QUEUE; // id, callback, length
-    #define _ENTIMER_QUEUE_STRIDE 3
-#else
-    list _ENTIMER_QUEUE; // id, callback, length, trigger
-    #define _ENTIMER_QUEUE_STRIDE 4
-#endif
-
-/*  
-FEATURE_ENTIMER_ENABLE_PREEMPTION is required to enable "preemption" mode, which exposes
-the enTimer_SetPreempt accessor function. If enTimer_SetPreempt(1) is called,
-all future timer events will skip the slow enTimer_Check call and, in
-combination with EVENT_EN_TIMER, pass the timer event directly to en_timer.
-
-This is useful for scripts that need to temporarily process high-frequency timer
-events and can tolerate delaying enTimer triggers until enTimer_SetPreempt(0) is
-called.
-*/
-#if defined FEATURE_ENTIMER_ENABLE_PREEMPTION
-    integer _ENTIMER_PREEMPT;
-#endif

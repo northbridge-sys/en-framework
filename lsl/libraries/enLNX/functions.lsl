@@ -22,6 +22,10 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+
+// used to detect script name changes
+string _ENLNX_SCRIPT_NAME;
+
 // safely resets LNX namespaces
 enLNX_Reset(
     integer flags
@@ -209,7 +213,7 @@ enLNX_Purge()
         if (pair != [])
         {
             string prim = llGetSubString(llList2String(pair, 0), 0, 35);
-            string prim_root = llList2String(llGetObjectDetails(prim, [OBJECT_ROOT]), 0);
+            string prim_root = llList2String(llGetObjectDetails((key)prim, [OBJECT_ROOT]), 0);
             string script = llList2String(pair, 1);
             if (prim != "" && prim_root != root)
             { // this pair is associated with a prim that doesn't share the same root as us
@@ -250,6 +254,8 @@ enLNX_Migrate(
     string filter
 )
 {
+    1; // used to fix linter
+
     #if defined TRACE_ENLNX_MIGRATE
         enLog_TraceParams(
             "enLNX_Migrate",
@@ -306,6 +312,8 @@ enLNX_Migrate(
 // updates LSD entries that use old script name
 enLNX_CheckScriptName()
 {
+    1; // used to fix linter
+
     #if defined TRACE_ENLNX_CHECKSCRIPTNAME
         enLog_Trace("enLNX_CheckScriptName()");
     #endif
@@ -325,6 +333,8 @@ _enLNX_uuid_changed(
     string last_uuid
 )
 {
+    1; // used to fix linter
+
     #if defined TRACE_ENLNX_UUID_CHANGED
         enLog_TraceParams(
             "_enLNX_uuid_changed",
@@ -348,6 +358,8 @@ _enLNX_changed(
     integer change
 )
 {
+    1; // used to fix linter
+
     #if defined TRACE_ENLNX_CHANGED
         enLog_TraceParams(
             "_enLNX_changed",
@@ -369,6 +381,8 @@ _enLNX_on_rez(
     integer param
 )
 {
+    1; // used to fix linter
+
     #if defined TRACE_ENLNX_ON_REZ
         enLog_TraceParams(
             "_enLNX_on_rez",

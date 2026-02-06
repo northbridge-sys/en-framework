@@ -6,6 +6,7 @@ Copyright (C) 2024  Northbridge Business Systems
 https://docs.northbridgesys.com/en-framework
 */
 
+
 /*!
 Returns the ordinal text ("st", "nd", "rd", or "th") for a specified number.
 @param integer i Number.
@@ -90,7 +91,7 @@ integer enInteger_ToNybbles(
     integer digit; // which digit is being added
     integer nybbles;
     do nybbles = ( ( lsn = ( i & 0xF ) ) << ( 4 * digit++ ) ) | nybbles; // bitwise out the least significant nybble, insert it into nybbles at current digit
-    while ( --digits && i = ( 0xFFFFFFF & ( i >> 4 ) ) );
+    while ( i = ( 0xFFFFFFF & ( i >> 4 ) ) && --digits );
     return nybbles;
 }
 
