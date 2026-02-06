@@ -22,9 +22,6 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// DO NOT EDIT THIS LINE - LIBRARY CROSS-LOADER
-#include "northbridge-sys/en-framework/lsl/libraries.lsl"
-
 string enAvatar_Elem(string id)
 {
     return "\"" + id + "\" (secondlife:///app/agent/" + id + "/username)";

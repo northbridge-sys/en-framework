@@ -6,8 +6,6 @@ Copyright (C) 2024  Northbridge Business Systems
 https://docs.northbridgesys.com/en-framework
 */
 
-// DO NOT EDIT THIS LINE - LIBRARY CROSS-LOADER
-#include "northbridge-sys/en-framework/lsl/libraries.lsl"
 
 /*!
 Returns the ordinal text ("st", "nd", "rd", or "th") for a specified number.

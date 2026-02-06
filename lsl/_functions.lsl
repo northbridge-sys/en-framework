@@ -18,20 +18,15 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 
 // functions
 #include "northbridge-sys/en-framework/lsl/libraries/enAvatar/functions.lsl"
-// enDateTime is causing lint bugs
-//#include "northbridge-sys/en-framework/lsl/libraries/enDatetime/functions.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries/enDatetime/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enEnvironment/functions.lsl"
-// enFloat is causing lint bugs
-//#include "northbridge-sys/en-framework/lsl/libraries/enFloat/functions.lsl"
-// enInteger is causing lint bugs
-//#include "northbridge-sys/en-framework/lsl/libraries/enInteger/functions.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries/enFloat/functions.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries/enInteger/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enInventory/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enKey/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enKVS/functions.lsl"
-// enList is causing lint bugs
-//#include "northbridge-sys/en-framework/lsl/libraries/enList/functions.lsl"
-// enLog is causing lint bugs
-//#include "northbridge-sys/en-framework/lsl/libraries/enLog/functions.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries/enList/functions.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries/enLog/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enLNX/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enPrim/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enRotation/functions.lsl"

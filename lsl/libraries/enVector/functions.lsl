@@ -24,8 +24,6 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 
 //  ==  TYPECASTING
 
-// DO NOT EDIT THIS LINE - LIBRARY CROSS-LOADER
-#include "northbridge-sys/en-framework/lsl/libraries.lsl"
 
 //  removes the < & > from a vector and rounds each element, good for displaying positions
 string enVector_ToString(

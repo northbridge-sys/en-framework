@@ -4,8 +4,6 @@ Copyright (C) 2025  Northbridge Business Systems
 https://docs.northbridgesys.com/en-framework
 */
 
-// DO NOT EDIT THIS LINE - LIBRARY CROSS-LOADER
-#include "northbridge-sys/en-framework/lsl/libraries.lsl"
 
 /*!
 Adds a number of milliseconds to an enDatetime millisec integer to safely wrap milliseconds at the ends of a month.

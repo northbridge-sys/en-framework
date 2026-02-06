@@ -22,8 +22,6 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// DO NOT EDIT THIS LINE - LIBRARY CROSS-LOADER
-#include "northbridge-sys/en-framework/lsl/libraries.lsl"
 
 //  returns 1 if is a valid key (INCLUDING NULL_KEY, unlike the regular if (key) conditional check)
 integer enKey_Is(
