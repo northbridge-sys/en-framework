@@ -24,11 +24,30 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 list _ENRPC_HTTP_PARAMETERS;
 list _ENRPC_CLEP; // domain, flags, handle
 #define _ENRPC_CLEP_STRIDE 3
-// used by enRPC_DialogListen()
-integer _ENRPC_DIALOG_LSN;
+integer _ENRPC_DIALOG_LSN; // used by enRPC_DialogListen()
+string _ENRPC_SOURCE_REGION; // used by FEATURE_ENRPC_STAGE_SOURCE_REGION
+string _ENRPC_SOURCE_PRIM; // used by FEATURE_ENRPC_STAGE_SOURCE_PRIM
 
 #if !defined OVERRIDE_ENRPC_KEYS
     list ENRPC_KEYS; // only create an empty ENRPC_KEYS if OVERRIDE_ENRPC_KEYS is not defined (and ENRPC_KEYS defined as global)
+#endif
+
+#if defined FEATURE_ENRPC_STAGE_SOURCE_REGION
+    enRPC_StageSourceRegion(
+        string source_region
+    )
+    {
+        _ENRPC_SOURCE_REGION = source_region;
+    }
+#endif
+
+#if defined FEATURE_ENRPC_STAGE_SOURCE_PRIM
+    enRPC_StageSourcePrim(
+        string source_prim
+    )
+    {
+        _ENRPC_SOURCE_PRIM = source_prim;
+    }
 #endif
 
 /*!
@@ -275,7 +294,7 @@ string _enRPC_Send(
     string timestamp = llGetTimestamp();
 
     integer target_link;
-    if (flags & FLAG_ENRPC_METHOD_LEP)
+    if (flags & FLAG_ENRPC_PROTOCOL_LEP)
     {
         if ((integer)target_prim || target_prim == "0")
         { // the specified target_prim is actually target_link, so swap them
@@ -291,8 +310,21 @@ string _enRPC_Send(
 
     list data = [
         timestamp,
-        enString_If(flags & FLAG_ENRPC_METHOD_CLEP, llGetRegionName(), ""),
-        llGetKey(),
+        enString_If(
+            flags & FLAG_ENRPC_PROTOCOL_CLEP,
+            #if defined FEATURE_ENRPC_STAGE_SOURCE_REGION
+                enString_If(_ENRPC_SOURCE_REGION == "", llGetRegionName(), _ENRPC_SOURCE_REGION),
+            #else
+                llGetRegionName()
+            #endif
+            ,
+            ""
+        ),
+        #if defined FEATURE_ENRPC_STAGE_SOURCE_PRIM
+            enString_If(_ENRPC_SOURCE_PRIM == "", llGetKey(), _ENRPC_SOURCE_PRIM),
+        #else
+            llGetKey(),
+        #endif
         source_script,
         llReplaceSubString(target_selector, "\n", "", 0),
         target_prim,
@@ -305,7 +337,7 @@ string _enRPC_Send(
         llEscapeURL(result)
     ];
 
-    #if defined FEATURE_ENRPC_ENABLE_SIGNING
+    #if defined FEATURE_ENRPC_PROTOCOL_SIGNING
         // signing is enabled - are we signing this message?
         string private_key = enRPC_GetKey(key_name); // import private_key from ENRPC_KEYS
 
@@ -328,8 +360,8 @@ string _enRPC_Send(
         }
     #endif
 
-    #if defined FEATURE_ENRPC_ENABLE_LEP
-        if (flags & FLAG_ENRPC_METHOD_LEP)
+    #if (defined FEATURE_ENRPC_PROTOCOL_LEP || defined FEATURE_ENRPC_PROTOCOL_LEP_OUTBOUND)
+        if (flags & FLAG_ENRPC_PROTOCOL_LEP)
         {
             llMessageLinked(
                 target_link,
@@ -338,29 +370,35 @@ string _enRPC_Send(
                 ""
             );
         }
+    #else
+        if (flags & FLAG_ENRPC_PROTOCOL_LEP)
+            enLog_Error("FEATURE_ENRPC_PROTOCOL_LEP[_OUTBOUND] not defined");
     #endif
 
-    #if defined FEATURE_ENRPC_ENABLE_CLEP
-        if (flags & FLAG_ENRPC_METHOD_CLEP)
+    #if (defined FEATURE_ENRPC_PROTOCOL_CLEP || defined FEATURE_ENRPC_PROTOCOL_CLEP_OUTBOUND)
+        if (flags & FLAG_ENRPC_PROTOCOL_CLEP)
         {
             integer channel = enRPC_Channel(domain);
             if (target_prim == "") target_prim = NULL_KEY;
             if (target_prim == NULL_KEY) llRegionSay(channel, llDumpList2String(data, "\n")); // RS if prim is not specified
             else if (llGetObjectDetails(target_prim, [OBJECT_PHANTOM]) != []) llRegionSayTo(target_prim, channel, llDumpList2String(data, "\n")); // RST if prim is in region
+    #else
+        if (flags & FLAG_ENRPC_PROTOCOL_CLEP)
+            enLog_Error("FEATURE_ENRPC_PROTOCOL_CLEP[_OUTBOUND] not defined");
     #endif
-    #if defined FEATURE_ENRPC_ENABLE_CLEP && defined FEATURE_ENCLEP_ENABLE_SHOUT
-            else llShout(channel, llDumpList2String(data, "\n")); // shout if prim is not in region and FEATURE_ENCLEP_ENABLE_SHOUT is defined
-    #elif defined FEATURE_ENRPC_ENABLE_CLEP && defined FEATURE_ENCLEP_ENABLE_SAY
-            else llSay(channel, llDumpList2String(data, "\n")); // say if prim is not in region and FEATURE_ENCLEP_ENABLE_SAY is defined
-    #elif defined FEATURE_ENRPC_ENABLE_CLEP && defined FEATURE_ENCLEP_ENABLE_WHISPER
-            else llWhisper(channel, llDumpList2String(data, "\n")); // whisper if prim is not in region and FEATURE_ENCLEP_ENABLE_WHISPER is defined
+    #if (defined FEATURE_ENRPC_PROTOCOL_CLEP || defined FEATURE_ENRPC_PROTOCOL_CLEP_OUTBOUND) && defined FEATURE_ENRPC_PROTOCOL_CLEP_SHOUT
+            else llShout(channel, llDumpList2String(data, "\n")); // shout if prim is not in region and FEATURE_ENRPC_PROTOCOL_CLEP_SHOUT is defined
+    #elif (defined FEATURE_ENRPC_PROTOCOL_CLEP || defined FEATURE_ENRPC_PROTOCOL_CLEP_OUTBOUND) && defined FEATURE_ENRPC_PROTOCOL_CLEP_SAY
+            else llSay(channel, llDumpList2String(data, "\n")); // say if prim is not in region and FEATURE_ENRPC_PROTOCOL_CLEP_SAY is defined
+    #elif (defined FEATURE_ENRPC_PROTOCOL_CLEP || defined FEATURE_ENRPC_PROTOCOL_CLEP_OUTBOUND) && defined FEATURE_ENRPC_PROTOCOL_CLEP_WHISPER
+            else llWhisper(channel, llDumpList2String(data, "\n")); // whisper if prim is not in region and FEATURE_ENRPC_PROTOCOL_CLEP_WHISPER is defined
     #endif
-    #if defined FEATURE_ENRPC_ENABLE_CLEP
+    #if (defined FEATURE_ENRPC_PROTOCOL_CLEP || defined FEATURE_ENRPC_PROTOCOL_CLEP_OUTBOUND)
         }
     #endif
 
-    #if defined FEATURE_ENRPC_ENABLE_SNEP
-        if (flags & FLAG_ENRPC_METHOD_SNEP)
+    #if (defined FEATURE_ENRPC_PROTOCOL_SNEP || defined FEATURE_ENRPC_PROTOCOL_SNEP_OUTBOUND)
+        if (flags & FLAG_ENRPC_PROTOCOL_SNEP)
         {
             if (enKey_IsNotNull(target_selector))
             { // target_selector is a UUID; we are responding to a previous inbound HTTP request
@@ -381,9 +419,46 @@ string _enRPC_Send(
                 _ENRPC_HTTP_PARAMETERS = [];
             }
         }
+    #else
+        if (flags & FLAG_ENRPC_PROTOCOL_SNEP)
+            enLog_Error("FEATURE_ENRPC_PROTOCOL_SNEP[_OUTBOUND] not defined");
     #endif
 
-    if (flags & FLAG_ENRPC_METHOD_RETURN) // return data directly from function instead of sending it
+    #if defined TRACE_ENRPC_SEND
+        enLog_TraceParams(
+            "_enRPC_Send",
+            [
+                "flags",
+                "key_name", 
+                "source_script", 
+                "target_selector", 
+                "target_prim", 
+                "target_script", 
+                "domain", 
+                "method", 
+                "params", 
+                "id", 
+                "e", 
+                "result"
+            ], 
+            [
+                enInteger_ElemBitfield(flags),
+                enString_Elem(key_name), 
+                enString_Elem(source_script), 
+                enString_Elem(target_selector), 
+                enPrim_Elem(target_prim), 
+                enString_Elem(target_script), 
+                enString_Elem(domain), 
+                enString_Elem(method), 
+                enString_Elem(params), 
+                enString_Elem(id), 
+                e, 
+                enString_Elem(result)
+            ]
+        );
+    #endif
+
+    if (flags & FLAG_ENRPC_RETURN) // return data directly from function instead of sending it
         return llDumpList2String(data, "\n");
 
     return id;
@@ -436,6 +511,13 @@ integer _enRPC_Unmarshal(
         if (llListFindList(OVERRIDE_ENRPC_ALLOWED_SOURCE_SCRIPTS, [llList2String(data, CONST_ENRPC_DATA_SOURCE_SCRIPT)]) == -1) return 0x3; // not sent from an allowed source script
     #endif
 
+    #if !defined FEATURE_ENRPC_DISABLE_SOURCE_PRIM_VERIFICATION
+        // filter out messages where the self-reported source_prim does not match the prim that sent this message
+        // this breaks if a relay is used, so to accept messages from relays,
+        // you must define FEATURE_ENRPC_DISABLE_SOURCE_PRIM_VERIFICATION and forego this check
+        if (source_prim != llList2String(data, CONST_ENRPC_DATA_SOURCE_PRIM)) return 0x4;
+    #endif
+
     string target_script = llList2String(data, CONST_ENRPC_DATA_TARGET_SCRIPT);
 
     list allowed_targets = ["", llGetScriptName()]; // allow messages targeted to "" (all) and this script only
@@ -449,21 +531,24 @@ integer _enRPC_Unmarshal(
     #endif
             #if !defined FEATURE_ENRPC_ALLOW_ALL_TARGET_SCRIPTS && defined FEATURE_ENRPC_ALLOW_FUZZY_TARGET_SCRIPT
                 // using substring matching
-                if (llSubStringIndex(llGetScriptName(), target_script) == -1) return 0x4; // not targeted to us
+                if (llSubStringIndex(llGetScriptName(), target_script) == -1) return 0x5; // not targeted to us
             #endif
             #if !defined FEATURE_ENRPC_ALLOW_ALL_TARGET_SCRIPTS && !defined FEATURE_ENRPC_ALLOW_FUZZY_TARGET_SCRIPT
                 // using exact matching
-                return 0x5; // not targeted to us
+                return 0x6; // not targeted to us
             #endif
     #if !defined FEATURE_ENRPC_ALLOW_ALL_TARGET_SCRIPTS
         }
     #endif
 
-    if (source_link > -1 && llList2String(data, CONST_ENRPC_DATA_DOMAIN) != OVERRIDE_STRING_ENRPC_LEP_DOMAIN) return 0x6; // discard message if it doesn't match the domain OVERRIDE_STRING_ENRPC_LEP_DOMAIN and received via link_message
+    #if !defined FEATURE_ENRPC_ALLOW_ALL_LEP_DOMAINS
+        if (source_link > -1 && llList2String(data, CONST_ENRPC_DATA_DOMAIN) != OVERRIDE_STRING_ENRPC_LEP_DOMAIN)
+            return 0x7; // discard message if it doesn't match the domain OVERRIDE_STRING_ENRPC_LEP_DOMAIN and received via link_message
+    #endif
 
     string key_name;
 
-    #if defined FEATURE_ENRPC_ENABLE_VERIFICATION
+    #if defined FEATURE_ENRPC_SIGNATURE_VERIFICATION
         string signature_method = llList2String(data, CONST_ENRPC_DATA_SIGNATURE_METHOD);
         if (signature_method == "RSA" || signature_method == "HMAC")
         {
@@ -499,14 +584,14 @@ integer _enRPC_Unmarshal(
     data = llListReplaceList(data, [llUnescapeURL(llList2String(data, CONST_ENRPC_DATA_RESULT))], CONST_ENRPC_DATA_RESULT, CONST_ENRPC_DATA_RESULT);
 
     integer flags;
-    if (source_link == -1) flags += FLAG_ENRPC_METHOD_CLEP;
-    else if (source_link == -2) flags += FLAG_ENRPC_METHOD_SNEP;
-    else flags += FLAG_ENRPC_METHOD_LEP;
+    if (source_link == -1) flags += FLAG_ENRPC_PROTOCOL_CLEP;
+    else if (source_link == -2) flags += FLAG_ENRPC_PROTOCOL_SNEP;
+    else flags += FLAG_ENRPC_PROTOCOL_LEP;
 
     string e = llList2String(data, CONST_ENRPC_DATA_E);
-    if (e == "") flags += FLAG_ENRPC_REQUEST;
-    else if (!(integer)e) flags += FLAG_ENRPC_RESULT;
-    else flags += FLAG_ENRPC_ERROR;
+    if (e == "") flags += FLAG_ENRPC_TYPE_REQUEST;
+    else if (!(integer)e) flags += FLAG_ENRPC_TYPE_RESULT | FLAG_ENRPC_TYPE_RESPONSE;
+    else flags += FLAG_ENRPC_TYPE_ERROR | FLAG_ENRPC_TYPE_RESPONSE;
 
     #if defined EVENT_ENRPC_MESSAGE && defined TRACE_EVENT_ENRPC_MESSAGE
         enLog_TraceParams(
