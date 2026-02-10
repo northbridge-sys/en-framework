@@ -66,6 +66,12 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
     #define OVERRIDE_INTEGER_ENRPC_SIGNATURE_EXPIRY 3
 #endif
 
+#define enRPC_ResetSourceRegion() \
+    enRPC_StageSourceRegion("")
+
+#define enRPC_ResetSourcePrim() \
+    enRPC_StageSourcePrim("")
+
 #define enRPC_ListenRemove(domain) \
     enRPC_Listen(domain, FLAG_ENRPC_LISTEN_REMOVE)
 
