@@ -38,13 +38,14 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #define CONST_ENRPC_DATA_SIGNATURE_HASH 15
 
 // internal flags
-#define FLAG_ENRPC_METHOD_LEP 0x1
-#define FLAG_ENRPC_METHOD_CLEP 0x2
-#define FLAG_ENRPC_METHOD_SNEP 0x4
-#define FLAG_ENRPC_METHOD_RETURN 0x8
-#define FLAG_ENRPC_REQUEST 0x10
-#define FLAG_ENRPC_RESULT 0x20
-#define FLAG_ENRPC_ERROR 0x40
+#define FLAG_ENRPC_PROTOCOL_LEP 0x1
+#define FLAG_ENRPC_PROTOCOL_CLEP 0x2
+#define FLAG_ENRPC_PROTOCOL_SNEP 0x4
+#define FLAG_ENRPC_RETURN 0x8
+#define FLAG_ENRPC_TYPE_REQUEST 0x10
+#define FLAG_ENRPC_TYPE_RESPONSE 0x20
+#define FLAG_ENRPC_TYPE_RESULT 0x40
+#define FLAG_ENRPC_TYPE_ERROR 0x80
 
 #if !defined OVERRIDE_INTEGER_ENRPC_LINK_MESSAGE_SCOPE
     #define OVERRIDE_INTEGER_ENRPC_LINK_MESSAGE_SCOPE LINK_THIS
@@ -76,96 +77,96 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
     enRPC_Listen(domain, FLAG_ENRPC_LISTEN_REMOVE)
 
 #define enRPC_LEPRequest(target_link, target_script, domain, method, params, id) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_LEP, "", llGetScriptName(), "", (string)(target_link), target_script, domain, method, params, id, "", "")
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_LEP, "", llGetScriptName(), "", (string)(target_link), target_script, domain, method, params, id, "", "")
 
 #define enRPC_LEPRequestSigned(key_name, target_link, target_script, domain, method, params, id) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_LEP, key_name, llGetScriptName(), "", (string)(target_link), target_script, domain, method, params, id, "", "")
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_LEP, key_name, llGetScriptName(), "", (string)(target_link), target_script, domain, method, params, id, "", "")
 
 #define enRPC_LEPResult(target_link, target_script, domain, method, params, id, result) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_LEP, "", llGetScriptName(), "", (string)(target_link), target_script, domain, method, params, id, "0", result)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_LEP, "", llGetScriptName(), "", (string)(target_link), target_script, domain, method, params, id, "0", result)
 
 #define enRPC_LEPResultSigned(key_name, target_link, target_script, domain, method, params, id, result) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_LEP, key_name, llGetScriptName(), "", (string)(target_link), target_script, domain, method, params, id, "0", result)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_LEP, key_name, llGetScriptName(), "", (string)(target_link), target_script, domain, method, params, id, "0", result)
 
 #define enRPC_LEPError(target_link, target_script, domain, method, params, id, error_code, error_message) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_LEP, "", llGetScriptName(), "", (string)(target_link), target_script, domain, method, params, id, (string)(error_code), error_message)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_LEP, "", llGetScriptName(), "", (string)(target_link), target_script, domain, method, params, id, (string)(error_code), error_message)
 
 #define enRPC_LEPErrorSigned(key_name, target_link, target_script, domain, method, params, id, error_code, error_message) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_LEP, key_name, llGetScriptName(), "", (string)(target_link), target_script, domain, method, params, id, (string)(error_code), error_message)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_LEP, key_name, llGetScriptName(), "", (string)(target_link), target_script, domain, method, params, id, (string)(error_code), error_message)
 
 #define enRPC_CLEPRequest(target_region, target_prim, target_script, domain, method, params, id) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
 
 #define enRPC_CLEPRequestSigned(key_name, target_region, target_prim, target_script, domain, method, params, id) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
 
 #define enRPC_CLEPResult(target_region, target_prim, target_script, domain, method, params, id, result) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
 
 #define enRPC_CLEPResultSigned(key_name, target_region, target_prim, target_script, domain, method, params, id, result) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
 
 #define enRPC_CLEPError(target_region, target_prim, target_script, domain, method, params, id, error_code, error_message) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
 
 #define enRPC_CLEPErrorSigned(key_name, target_region, target_prim, target_script, domain, method, params, id, error_code, error_message) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
 
 #define enRPC_HybridRequest(target_region, target_prim, target_script, domain, method, params, id) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_LEP | FLAG_ENRPC_METHOD_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_LEP | FLAG_ENRPC_PROTOCOL_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
 
 #define enRPC_HybridRequestSigned(key_name, target_region, target_prim, target_script, domain, method, params, id) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_LEP | FLAG_ENRPC_METHOD_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_LEP | FLAG_ENRPC_PROTOCOL_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
 
 #define enRPC_HybridResult(target_region, target_prim, target_script, domain, method, params, id, result) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_LEP | FLAG_ENRPC_METHOD_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_LEP | FLAG_ENRPC_PROTOCOL_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
 
 #define enRPC_HybridResultSigned(key_name, target_region, target_prim, target_script, domain, method, params, id, result) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_LEP | FLAG_ENRPC_METHOD_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_LEP | FLAG_ENRPC_PROTOCOL_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
 
 #define enRPC_HybridError(target_region, target_prim, target_script, domain, method, params, id, error_code, error_message) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_LEP | FLAG_ENRPC_METHOD_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_LEP | FLAG_ENRPC_PROTOCOL_CLEP, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
 
 #define enRPC_HybridErrorSigned(key_name, target_region, target_prim, target_script, domain, method, params, id, error_code, error_message) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_LEP | FLAG_ENRPC_METHOD_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_LEP | FLAG_ENRPC_PROTOCOL_CLEP, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
 
 #define enRPC_SNEPRequest(target_url, target_prim, target_script, domain, method, params, id) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, "", llGetScriptName(), target_url, target_prim, target_script, domain, method, params, id, "", "")
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_SNEP, "", llGetScriptName(), target_url, target_prim, target_script, domain, method, params, id, "", "")
 
 #define enRPC_SNEPRequestSigned(key_name, target_url, target_prim, target_script, domain, method, params, id) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, key_name, llGetScriptName(), target_url, target_prim, target_script, domain, method, params, id, "", "")
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_SNEP, key_name, llGetScriptName(), target_url, target_prim, target_script, domain, method, params, id, "", "")
 
 #define enRPC_SNEPResult(target_request_id, target_prim, target_script, domain, method, params, id, result) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, "", llGetScriptName(), target_request_id, target_prim, target_script, domain, method, params, id, "0", result)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_SNEP, "", llGetScriptName(), target_request_id, target_prim, target_script, domain, method, params, id, "0", result)
 
 #define enRPC_SNEPResultSigned(key_name, target_request_id, target_prim, target_script, domain, method, params, id, result) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, key_name, llGetScriptName(), target_request_id, target_prim, target_script, domain, method, params, id, "0", result)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_SNEP, key_name, llGetScriptName(), target_request_id, target_prim, target_script, domain, method, params, id, "0", result)
 
 #define enRPC_SNEPError(target_request_id, target_prim, target_script, domain, method, params, id, error_code, error_message) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, "", llGetScriptName(), target_request_id, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_SNEP, "", llGetScriptName(), target_request_id, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
 
 #define enRPC_SNEPErrorSigned(key_name, target_request_id, target_prim, target_script, domain, method, params, id, error_code, error_message) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_SNEP, key_name, llGetScriptName(), target_request_id, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
+    _enRPC_Send(FLAG_ENRPC_PROTOCOL_SNEP, key_name, llGetScriptName(), target_request_id, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
 
 // note: target_prim may be target_link typecast to string for all enRPC_Generate*() macros
 
 #define enRPC_GenerateRequest(target_region, target_prim, target_script, domain, method, params, id) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_RETURN, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
+    _enRPC_Send(FLAG_ENRPC_RETURN, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
 
 #define enRPC_GenerateRequestSigned(key_name, target_region, target_prim, target_script, domain, method, params, id) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_RETURN, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
+    _enRPC_Send(FLAG_ENRPC_RETURN, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "", "")
 
 #define enRPC_GenerateResult(target_region, target_prim, target_script, domain, method, params, id, result) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_RETURN, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
+    _enRPC_Send(FLAG_ENRPC_RETURN, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
 
 #define enRPC_GenerateResultSigned(key_name, target_region, target_prim, target_script, domain, method, params, id, result) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_RETURN, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
+    _enRPC_Send(FLAG_ENRPC_RETURN, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, "0", result)
 
 #define enRPC_GenerateError(target_region, target_prim, target_script, domain, method, params, id, error_code, error_message) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_RETURN, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
+    _enRPC_Send(FLAG_ENRPC_RETURN, "", llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
 
 #define enRPC_GenerateErrorSigned(key_name, target_region, target_prim, target_script, domain, method, params, id, error_code, error_message) \
-    _enRPC_Send(FLAG_ENRPC_METHOD_RETURN, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
+    _enRPC_Send(FLAG_ENRPC_RETURN, key_name, llGetScriptName(), target_region, target_prim, target_script, domain, method, params, id, (string)(error_code), error_message)
 
 // NOTE: do not use FLAG_ENRPC_LISTEN_OWNERONLY across region borders!
 #define FLAG_ENRPC_LISTEN_OWNERONLY 0x1
