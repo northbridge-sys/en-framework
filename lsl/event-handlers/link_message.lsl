@@ -25,7 +25,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #endif
 
 // _enRPC_link_message
-#if defined FEATURE_ENRPC_ENABLE_LEP
+#if defined FEATURE_ENRPC_PROTOCOL_LEP || defined FEATURE_ENRPC_PROTOCOL_LEP_INBOUND
     #define _EVENT_LINK_MESSAGE
     #define _HOOK_ENRPC_LINK_MESSAGE
 #endif
