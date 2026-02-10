@@ -27,6 +27,7 @@ This is a full script that reports all LEP messages sent via link_message to
 this prim.
 */
 
+#define FEATURE_ENRPC_ALLOW_ALL_LEP_DOMAINS
 #define FEATURE_ENRPC_ALLOW_ALL_TARGET_SCRIPTS
 #define OVERRIDE_ENLOG_DEFAULT_LOGLEVEL 6
 
