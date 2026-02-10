@@ -1,11 +1,11 @@
 #define EVENT_EN_STATE_ENTRY
 #define EVENT_ENRPC_MESSAGE
 
-//#define FEATURE_ENRPC_ENABLE_ROUTING
-#define FEATURE_ENRPC_ENABLE_CLEP
-#define FEATURE_ENRPC_ENABLE_LEP
-//#define FEATURE_ENRPC_ENABLE_SIGNING
-//#define FEATURE_ENRPC_ENABLE_VERIFICATION
+//#define FEATURE_ENRPC_PROTOCOL_ROUTING
+#define FEATURE_ENRPC_PROTOCOL_CLEP
+#define FEATURE_ENRPC_PROTOCOL_LEP
+//#define FEATURE_ENRPC_PROTOCOL_SIGNING
+//#define FEATURE_ENRPC_SIGNATURE_VERIFICATION
 
 #define OVERRIDE_STRING_ENRPC_LEP_DOMAIN "CLEP Test Domain"
 
@@ -19,7 +19,7 @@ string TESTER_KEY_NAME = "sample-rpc";
 
 en_state_entry()
 {
-    #if !defined FEATURE_ENRPC_ENABLE_SIGNING && !defined FEATURE_ENRPC_ENABLE_VERIFICATION
+    #if !defined FEATURE_ENRPC_PROTOCOL_SIGNING && !defined FEATURE_ENRPC_SIGNATURE_VERIFICATION
         TESTER_KEY_NAME = ""; // use a blank TESTER_KEY_NAME if signing is disabled, otherwise the messages will be dropped
     #endif
     
@@ -33,7 +33,7 @@ enrpc_message(
     list data
 )
 {
-    if (~flags & FLAG_ENRPC_REQUEST) return;
+    if (~flags & FLAG_ENRPC_TYPE_REQUEST) return;
 
     if (key_name != TESTER_KEY_NAME) return; // reject unsigned/missigned messages
 
@@ -47,10 +47,10 @@ enrpc_message(
     string id = llList2String(data, CONST_ENRPC_DATA_ID);
     string params = llList2String(data, CONST_ENRPC_DATA_PARAMS);
 
-    enLog_Info("Got " + llList2String(["LEP", "CLEP", "SNEP"], llListFindList([FLAG_ENRPC_METHOD_LEP, FLAG_ENRPC_METHOD_CLEP, FLAG_ENRPC_METHOD_SNEP], [flags & (FLAG_ENRPC_METHOD_LEP | FLAG_ENRPC_METHOD_CLEP | FLAG_ENRPC_METHOD_SNEP)])) + " ping on domain \"" + domain + "\" using key \"" + key_name + "\" with ID \"" + id + "\" and params: " + params);
+    enLog_Info("Got " + llList2String(["LEP", "CLEP", "SNEP"], llListFindList([FLAG_ENRPC_PROTOCOL_LEP, FLAG_ENRPC_PROTOCOL_CLEP, FLAG_ENRPC_PROTOCOL_SNEP], [flags & (FLAG_ENRPC_PROTOCOL_LEP | FLAG_ENRPC_PROTOCOL_CLEP | FLAG_ENRPC_PROTOCOL_SNEP)])) + " ping on domain \"" + domain + "\" using key \"" + key_name + "\" with ID \"" + id + "\" and params: " + params);
 
     // respond to request
-    if (flags & FLAG_ENRPC_METHOD_LEP)
+    if (flags & FLAG_ENRPC_PROTOCOL_LEP)
     {
         enRPC_LEPResultSigned(
             TESTER_KEY_NAME, // this must match key_name above (not necessarily in the source)
@@ -63,7 +63,7 @@ enrpc_message(
             "{\"mid\":\"" + llGetTimestamp() + "\"}" // respond with result as timestamp
         );
     }
-    if (flags & FLAG_ENRPC_METHOD_CLEP)
+    if (flags & FLAG_ENRPC_PROTOCOL_CLEP)
     {
         enRPC_CLEPResultSigned(
             TESTER_KEY_NAME, // this must match key_name above (not necessarily in the source)

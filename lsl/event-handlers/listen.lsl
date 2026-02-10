@@ -17,7 +17,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 // if we want to receive any CLEP messages, trigger _enRPC_listen()
-#if defined FEATURE_ENRPC_ENABLE_CLEP
+#if (defined FEATURE_ENRPC_PROTOCOL_CLEP || defined FEATURE_ENRPC_PROTOCOL_CLEP_INBOUND)
     #define _EVENT_LISTEN
     #define _HOOK_ENRPC_LISTEN
 #endif

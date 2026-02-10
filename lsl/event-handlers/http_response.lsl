@@ -1,6 +1,6 @@
 /*
 En LSL Framework
-Copyright (C) 2024-25  Northbridge Business Systems
+Copyright (C) 2024-26  Northbridge Business Systems
 https://docs.northbridgesys.com/en-framework
 
 This script is free software: you can redistribute it and/or modify it under the
@@ -16,26 +16,62 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+// if we want to receive responses to SNEP messages, trigger _enRPC_http_response()
+#if defined FEATURE_ENRPC_PROTOCOL_SNEP || defined FEATURE_ENRPC_PROTOCOL_SNEP_RESPONSE
+    #define _EVENT_HTTP_RESPONSE
+    #define _HOOK_ENRPC_HTTP_RESPONSE
+#endif
+
+// if we want to, pass all non-caught events
 #if defined EVENT_EN_HTTP_RESPONSE
-	http_response( key request, integer status, list metadata, string body )
+    #define _EVENT_HTTP_RESPONSE
+    #define _HOOK_EN_HTTP_RESPONSE
+#endif
+
+// if we are using this event and want to trace it, define the trace hook
+#if defined _EVENT_HTTP_RESPONSE && defined TRACE_EVENT_HTTP_RESPONSE
+    #define _TRACE_EVENT_HTTP_RESPONSE
+#endif
+
+
+
+#if defined _EVENT_HTTP_RESPONSE
+	http_response(
+        key request,
+        integer status,
+        list metadata,
+        string body
+    )
 	{
 #endif
 
         // log event if requested
-        #if defined TRACE_EVENT_EN_HTTP_RESPONSE && defined EVENT_EN_HTTP_RESPONSE
-            enLog_TraceParams( "http_response", [ "request", "status", "metadata", "body" ], [
-                enString_Elem( request ),
-                status,
-                enList_Elem( metadata ),
-                enString_Elem( body )
-            ] );
+        #if defined _TRACE_EVENT_HTTP_RESPONSE
+            enLog_TraceParams(
+                "http_response",
+                [
+                    "request",
+                    "status",
+                    "metadata",
+                    "body"
+                ],
+                [
+                    enString_Elem( request ),
+                    status,
+                    enList_Elem( metadata ),
+                    enString_Elem( body )
+                ]
+            );
         #endif
 
-        // pass to user-defined function if requested
-		#if defined EVENT_EN_HTTP_RESPONSE
+        #if defined _HOOK_ENRPC_HTTP_RESPONSE
+		    if (~_enRPC_http_response(request, status, metadata, body) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
+        #endif
+        
+		#if defined _HOOK_EN_HTTP_RESPONSE
             en_http_response( request, status, metadata, body );
 		#endif
 
-#if defined EVENT_EN_HTTP_RESPONSE
+#if defined _EVENT_HTTP_RESPONSE
 	}
 #endif

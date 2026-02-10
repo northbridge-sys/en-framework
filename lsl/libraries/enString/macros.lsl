@@ -40,3 +40,9 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 
 #define enString_Quote(s) \
     "\"" + s + "\""
+
+#define enString_EscapeJsonString(s) \
+    enString_EscapeQuotes(s)
+
+#define enString_QuoteJsonString(s) \
+    enString_EscapedQuote(s)
