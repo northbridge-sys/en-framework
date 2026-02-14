@@ -7,10 +7,6 @@ https://docs.northbridgesys.com/en-framework
 #define FLAG_ENDATETIME_12_HOUR 0x1
 #define FLAG_ENDATETIME_12_HOUR_M 0x2
 #define FLAG_ENDATETIME_12_HOUR_SPACE 0x4
-#define FLAG_ENDATETIME_PAD_ZEROES 0x8
-#define FLAG_ENDATETIME_DMY 0x10
-#define FLAG_ENDATETIME_MDY 0x20
-#define FLAG_ENDATETIME_TEXT 0x40
 #define FLAG_ENDATETIME_TEXT_DMY 0x80
 #define FLAG_ENDATETIME_TEXT_MDY 0x100
 #define FLAG_ENDATETIME_TEXT_MONTH_SHORT 0x200
@@ -30,7 +26,7 @@ Converts current environment time (sun position) at script's location to a perce
 NOTE: this shouldn't be used in attachments maybe because of llGetPos?
 @return float Daypart of 24 hours starting at midnight (0.0-1.0).
 */
-#define enDatetime_EnvironmentToDaypart_Here() \
+#define enDatetime_EnvironmentToDaypartHere() \
     enDatetime_EnvironmentToDaypart(llGetPos())
 
 /*!
