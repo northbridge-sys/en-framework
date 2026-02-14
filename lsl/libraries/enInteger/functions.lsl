@@ -95,7 +95,7 @@ integer enInteger_ToNybbles(
     return nybbles;
 }
 
-// converts int to string of length using 64-character charset, ENTYPE_CHARSET_64
+// converts int to string of length using 64-character charset, OVERRIDE_ENINTEGER_CHARSET_64
 string enInteger_ToString64(
     integer int,
     integer length

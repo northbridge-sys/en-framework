@@ -51,9 +51,6 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #define enInteger_GetSignZeroPositive(i) \
     (enInteger_IsPositiveOrZero(i) * 2 - 1)
 
-#define enInteger_InvertNegative(i) \
-    (i ^ CONST_INTEGER_NEGATIVE)
-
 // this is not ideal C practice for this implementation due to llAbs
 // randomness at ranges larger than CONST_INTEGER_MAX will just have to do it themselves.
 // idk what you would even be doing that for tbh
@@ -78,11 +75,3 @@ just a reminder that bitwise XOR exists, so you don't try doing any shenanigans 
 */
 #define enInteger_FlipBits(bitfield, position) \
     (bitfield ^ position)
-
-/*!
-Pushes four bits (one nybble, or one hex) onto the least significant end of an integer, shifting everything else left.
-This is mainly used for error code traces (each function appends its error out of 16 options, 0x0 to 0xF), with 0x0 being success.
-This allows the resulting caller to quickly check that the procedure was successful by checking (!e).
-*/
-#define enInteger_PushNybble(nybble, int) \
-    (int << 4) | nybble
