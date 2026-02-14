@@ -288,7 +288,7 @@ string enDatetime_YMDHMSToPretty(
     integer flags
 )
 {
-    return enDatetime_YMDToPretty(llList2List(ymdhms, 0, 2), flags) + enDatetime_HMSToPretty(llList2List(ymdhms, 3, -1), flags);
+    return enDatetime_YMDToPretty(llList2List(ymdhms, 0, 2), flags) + " " + enDatetime_HMSToPretty(llList2List(ymdhms, 3, -1), flags);
 }
 
 /*!
@@ -365,7 +365,7 @@ string enDatetime_YMDToPretty(
     string m;
     string d;
     // generate month and day text if we're going to use it
-    if (flags & (FLAG_ENDATETIME_TEXT_DMY | FLAG_ENDATETIME_TEXT_MDY))
+    if (flags & FLAG_ENDATETIME_TEXT_DMY && flags & FLAG_ENDATETIME_TEXT_MDY)
     {
         // generate month
         if (flags & FLAG_ENDATETIME_TEXT_MONTH_SHORT)
@@ -379,7 +379,7 @@ string enDatetime_YMDToPretty(
         integer i_d = llList2Integer(ymd, 2);
         d = (integer)d; // start with raw digit ("1")
         if (flags & FLAG_ENDATETIME_TEXT_DAY_ORDINAL) d += enInteger_Ordinal(i_d); // we need to add an ordinal ("1st")
-        if (flags & (FLAG_ENDATETIME_TEXT_DMY | FLAG_ENDATETIME_TEXT_DAY_OF)) d += " of";
+        if (flags & FLAG_ENDATETIME_TEXT_DAY_ORDINAL && flags & FLAG_ENDATETIME_TEXT_DMY && flags & FLAG_ENDATETIME_TEXT_DAY_OF) d += " of";
     }
 
     // textual representation of date in DD Mmm YYYY
