@@ -128,7 +128,7 @@ The En framework provides a "central database" of "little programs" for all sort
 
 En is intended for complex projects, especially "networked" scripts - that is, one or more objects with multiple scripts that need a standardized and efficient way to communicate with each other. The performance impact of multiple scripts in an object is trivial, but LSL is not designed to handle these sorts of scenarios well at runtime.
 
-For example, if an object has multiple scripts in a prim and you need to use `llMessageLinked` to send a message to one of them, there is simply no way to do that without triggering `link_message` in every single script in the prim. enLEP, therefore, includes a filter to optionally target a specific script, so if/when a different script receives that message, the enLEP handler in the other script will drop the event as quickly as possible to reduce script time instead of wasting time processing the message further.
+For example, if an object has multiple scripts in a prim and you need to use `llMessageLinked` to send a message to one of them, there is simply no way to do that without triggering `link_message` in every single script in the prim. enRPC, therefore, includes a filter to optionally target a specific script, so if/when a different script receives that message, the enRPC handler in the other script will drop the event as quickly as possible to reduce script time instead of wasting time processing the message further.
 
 While we use En for most of our projects, there are still some limited circumstances where raw LSL is good enough or provides a slight edge in performance. Generally, En is designed for scaling at the expense of script memory and some limited performance in certain scenarios in simple scripts. It is primarily efficient in a code-factoring sense - that is, by using En functions, En scripts do not unnecessarily duplicate code that could be consolidated into a single function.
 
@@ -141,7 +141,7 @@ Several reasons:
 
 ### Don't the additional function definitions increase script memory?
 
-En dynamically generates event handlers depending on the flags you define in the script. For example, defining `EVENT_ENCLEP_RPC_REQUEST` creates a `listen` event handler, passing CLEP requests to `enclep_rpc_request()` and any other messages to `en_listen()`.
+En dynamically generates event handlers depending on the flags you define in the script. For example, defining `FEATURE_ENRPC_PROTOCOL_CLEP` creates a `listen` event handler, passing CLEP requests to `enrpc_messages()` and any other messages to `en_listen()` if `EVENT_EN_LISTEN` is defined.
 
 Since LSL does not support dynamic event subscription or multiple event handlers, the only way to accomplish this is to have En generate event handlers itself and pass events to En-defined and user-defined functions depending on which features are enabled.
 
