@@ -12,7 +12,7 @@ An unofficial framework for the [Linden Scripting Language](https://wiki.secondl
 
 *"Second Life®" is a trademark of Linden Research, Inc., d/b/a Linden Lab. Northbridge Business Systems and the En framework are are not affiliated with or sponsored by Linden Research.*
 
-LSL and SLua are the native scripting language used to control Second Life objects. Certain third-party viewers incorporate an [LSL preprocessor](https://wiki.firestormviewer.org/fs_preprocessor) that provides C-style preprocessor macros via the built-in script editor. The En Framework leverages the `#include` and `#define` macros, along with the built-in script optimizer, to make dozens of helper functions available to LSL scripts. It can also be used with the [official Second Life VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin) to provide similar support in SLua using `require()`.
+LSL and SLua are the native scripting languages used to control Second Life objects. Certain third-party viewers incorporate an [LSL preprocessor](https://wiki.firestormviewer.org/fs_preprocessor) that provides C-style preprocessor macros via the built-in script editor. The En Framework leverages the `#include` and `#define` macros, along with the built-in script optimizer, to make dozens of helper functions available to LSL scripts. It can also be used with the [official Second Life VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin) to provide similar support in SLua using `require()`.
 
 **SLua support is currently incomplete and untested until SLua is available on a Linux-compatible viewer.**
 
@@ -21,8 +21,7 @@ LSL and SLua are the native scripting language used to control Second Life objec
 Some of the useful features En provides:
 
 - enLog - a standardized logging interface that can be configured for "in-the-field" debugging
-- enLEP - heavily extended `llMessageLinked`-like functions
-- enCLEP - `llListen`/`llRegionSayTo` encapsulation for enLEP or other raw data
+- enRPC - heavily extended `llMessageLinked` and `llListen`-like functions
 - enLNX - functions to safely write, read, and manipulate key-value pairs in the `llLinksetData*` store
 - enKVS - simple in-memory key-value store, particularly useful for backing up critical linkset data
 - enTimer - `llSetTimerEvent` with string callbacks, multiple concurrent timers, and one-shot timers
@@ -48,8 +47,6 @@ Note that you'll need to repeat this process for each update; there is no auto-u
 ## Usage
 
 **The complete reference guide for En is located on the [NBS Documentation portal](https://docs.northbridgesys.com/en-framework).**
-
-The following information is only an overview meant to describe how the En framework works at a basic level. We strongly recommend using the reference guide when writing En scripts!
 
 ### Overview
 
@@ -153,184 +150,6 @@ Passing events to user-defined functions only adds a trivial amount of memory us
 ### If I don't need any of the En functions, why use En at all?
 
 You don't have to! But En also provides a limited set of basic functionality that is always enabled unless specifically disabled via flags. For example, if the `"stop"` linkset data pair contains a truthy value, En will automatically stop the script on `state_entry`. This can be used for, e.g., updater and script distribution tools that have scripts inside them that must never run until added to another object.
-
-## Examples
-
-enLog enables in-the-field debugging out-of-the-box. With En, just write:
-
-```
-someFunction(integer x, integer y)
-{
-    enLog_TraceParams("someFunction", ["x", "y"], [x, y] );
-    enLog_Debug("This will only appear if loglevel is DEBUG or above");
-    enLog_Info("Function called with parameters " + (string)x + " and " + (string)y);
-    if (x) enLog_Warn("Non-zero values of x are discouraged");
-    if (y) enLog_Error("Non-zero values of y are prohibited (normally you would return at this point)");
-    if (x && y) enLog_FatalStop("Everything is terrible"); // script will stop when enLog_FatalStop is called
-}
-```
-
-and when you call `someFunction(1, 2);`, you'll see the following sent to you via `llOwnerSay` by default:
-
-```
-💬 Function called with parameters 1 and 2
-🚩 WARNING: Non-zero values of x are discouraged
-❌ ERROR: Non-zero values of y are prohibited (normally you would return at this point)
-🛑 FATAL ERROR: Script stopped: Everything is terrible
-```
-
-or, if you change the runtime loglevel to TRACE (such as with `enLog_SetLoglevel(TRACE);` from this or any other script in the object), you'll not only get additional relevant logs, but a header that shows the exact time, the first 4 digits of the object's UUID (handy for distinguishing between objects with the same name), the current memory usage, the preprocessed source line number, and the name of the script logging the message:
-
-```
-🔽 [12:11:24.81] (16% 13a1 @25) New Script
-🚦 someFunction(
-        x = 1,
-        y = 2
-    )
-🔽 [12:11:24.86] (16% 13a1 @26) New Script
-🪲 This will only appear if loglevel is DEBUG or above
-🔽 [12:11:24.89] (16% 13a1 @27) New Script
-💬 Function called with parameters 1 and 2
-🔽 [12:11:24.91] (16% 13a1 @28) New Script
-🚩 WARNING: Non-zero values of x are discouraged
-🔽 [12:11:24.98] (16% 13a1 @29) New Script
-❌ ERROR: Non-zero values of y are prohibited (normally you would return at this point)
-🔽 [12:11:25.05] (16% 13a1 @30) New Script
-🛑 FATAL ERROR: Script stopped: Everything is terrible
-```
-
-You can also send a copy of all logs as they are written to a separate object by writing the object's UUID to the `"logtarget"` linkset data value.
-
-En also implements LEP-RPC, LNX, and other tools for modular multi-script objects. For example, you can send a message to a specific script like so:
-
-```
-string id = enLEP_RPCRequest(
-    LINK_THIS,
-    "Target Script Name",
-    0,
-    "ping",
-    "{\"start\":\"" + llGetTimestamp() + "\"}",
-    llGenerateKey()
-);
-```
-
-The script named "Target Script Name" in the same prim will call the `enrpc_request()` callback function, as long as `EVENT_ENRPC_REQUEST` is defined:
-
-```
-#define EVENT_ENRPC_REQUEST
-
-#include "northbridge-sys/en-framework/lsl/libraries.lsl"
-
-enrpc_request(
-    integer source_link,
-    string source_script,
-    string target_script,
-    string domain,
-    integer int,
-    string method,
-    string params,
-    string id
-)
-{
-    // you can process this request however you like, but here's an example:
-
-    if (method != "ping") return; // only respond if method is "ping"
-
-    enLog_Info("Got ping on domain \"" + domain + "\" with ID \"" + id + "\" and params: " + params);
-
-    // respond to request
-    enLEP_RPCResult(
-        source_link, // you may send messages to any link or script, not just source_link and source_script
-        source_script, // however, typically you'd only respond to the source_link and source_script that sent the request
-        int, // return int
-        method, // return method
-        params, // return params
-        id, // return id
-        "{\"mid\":\"" + llGetTimestamp() + "\"}" // respond with result as timestamp
-    );
-}
-
-default
-{
-    #include "northbridge-sys/en-framework/lsl/event-handlers.lsl"
-}
-```
-
-Then, the source script will trigger `enlep_rpc_result()`, as long as `EVENT_ENLEP_RPC_RESULT` is defined:
-
-```
-#define EVENT_EN_STATE_ENTRY
-#define EVENT_ENLEP_RPC_RESULT
-
-#include "northbridge-sys/en-framework/lsl/libraries.lsl"
-
-en_state_entry()
-{
-    /*
-    example of where the enLEP_RPCRequest() call could be made
-    note that enLEP_RPCRequest() returns the id - this can be stored for reference in enlep_rpc_*() if desired
-    */
-    string id = enLEP_RPCRequest(
-        LINK_THIS,
-        "Target Script Name",
-        0,
-        "ping",
-        "{\"start\":\"" + llGetTimestamp() + "\"}",
-        llGenerateKey()
-    );
-    
-    enLog_Info("Sent ping with ID " + id);
-}
-
-enlep_rpc_result(
-    integer source_link,
-    string source_script,
-    string target_script,
-    string domain,
-    integer int,
-    string method,
-    string params,
-    string id,
-    string result
-)
-{
-    /*
-    you can process the response however you like
-
-    this enlep_rpc_result() function won't get called unless all of the following are true:
-    - this script receives a LEP-RPC result via link_message()
-    - the result is targeted to this script, "" (all scripts), or any script in the OVERRIDE_ENRPC_ALLOWED_TARGET_SCRIPTS list (see also FEATURE_ENRPC_ALLOW_FUZZY_TARGET_SCRIPT)
-    - if OVERRIDE_ENRPC_ALLOWED_SOURCE_SCRIPTS is defined, the response is from any script in that list (but note that source_script is self-reported, so this is NOT secure)
-    - this script has defined EVENT_ENLEP_RPC_RESULT
-    */
-
-    if (method != "ping") return; // only care about this response if method is "ping"
-
-    /*
-    note that you can have multi-level methods, like "file.open", "foo.bar.baz", etc.
-    it is up to the script whether to branch through a logic tree for each element, or just check the entire method string
-    */
-
-    /*
-    best practice is to look up the response token to determine which request it relates to, but this example skips that
-    if you are implementing this in a security-sensitive application, make sure to harden against spurious messages
-    */
-    
-    // convert timestamps into arbitrary millisecond-accurate integers, then get the differences between them for benchmarking
-    integer start = enDatetime_TimestampToMillisec(llJsonGetValue(params, ["start"])); // params is a timestamp string
-    integer mid = enDatetime_TimestampToMillisec(llJsonGetValue(result, ["mid"])); // result is a timestamp string
-    integer end = enDatetime_NowToMillisec();
-    
-    enLog_Success("Got ping result for ID " + id + " (" + (string)enDatetime_AddMillisec(mid, -start) + "ms for request, " + (string)enDatetime_AddMillisec(end, -mid) + "ms for result)");
-}
-
-default
-{
-    #include "northbridge-sys/en-framework/lsl/event-handlers.lsl"
-}
-```
-
-All other En scripts will ignore both `link_message` events, returning them as quickly as possible.
 
 ## License
 
