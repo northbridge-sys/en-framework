@@ -131,6 +131,11 @@ enInventory_NCRead(
         enLog_Debug("FEATURE_ENINVENTORY_ENABLE_NC not defined");
         return;
     #else
+        if (_ENINVENTORY_NC_N == "")
+        {
+            enLog_Error("Notecard not opened");
+            return;
+        }
         _ENINVENTORY_NC_L = i;
         string s = NAK;
         if (llGetFreeMemory() > OVERRIDE_ENINVENTORY_NC_MEMORY_BUFFER && _ENINVENTORY_NC_T > 0) s = llGetNotecardLineSync(_ENINVENTORY_NC_N, i); // attempt sync read if at least 2k of memory free and the llGetNumberOfNotecardLines dataserver event resolved
