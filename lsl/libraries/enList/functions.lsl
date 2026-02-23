@@ -62,6 +62,7 @@ list enList_ToJsonPairs(
     list in
 )
 {
+    // WARNING: This function is used for secure applications - DO NOT leak the data passed to it via enLog/etc.!
     list out;
     integer i;
     integer l = llGetListLength(in);
@@ -79,6 +80,7 @@ string enList_ToJsonObject(
     list in
 )
 {
+    // WARNING: This function is used for secure applications - DO NOT leak the data passed to it via enLog/etc.!
     return llList2Json(JSON_OBJECT, enList_ToJsonPairs(in));
 }
 
@@ -92,6 +94,7 @@ string enList_ToJsonArray(
     list in
 )
 {
+    // WARNING: This function is used for secure applications - DO NOT leak the data passed to it via enLog/etc.!
     list out;
     integer i;
     integer l = llGetListLength(in);
