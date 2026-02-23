@@ -65,7 +65,12 @@ integer enLNX_Write(integer flags, list name, string data)
         );
     #endif
 
-    return llLinksetDataWrite(enLNX_Head(flags) + llDumpList2String(name, "\n"), data);
+    integer before = llLinksetDataAvailable();
+    integer result = llLinksetDataWrite(enLNX_Head(flags) + llDumpList2String(name, "\n"), data);
+    integer after = llLinksetDataAvailable();
+
+    if (FLAG_ENLNX_RETURN_MEMORY_USED) return before - after;
+    return result;
 }
 
 string enLNX_Read(integer flags, list name)
@@ -104,7 +109,8 @@ list enLNX_Delete(integer flags, list name)
     #endif
 
     string regex;
-    if (flags & FLAG_ENLNX_DELETE_CHILDREN) regex = "\n.*";
+    if (flags & FLAG_ENLNX_ALL_CHILDREN) regex = "\n.*";
+    if (flags & FLAG_ENLNX_IMMEDIATE_CHILDREN) regex = "\n[^\n]*";
 	return llLinksetDataDeleteFound("^" + enString_EscapeRegex(enLNX_Head(flags) + llDumpList2String(name, "\n")) + regex + "$", "");
 }
 
@@ -132,7 +138,11 @@ list enLNX_Find(integer flags, list name, integer start, integer count)
             ]
         );
     #endif
-	return llLinksetDataFindKeys("^" + enString_EscapeRegex(enLNX_Head(flags) + llDumpList2String(name, "\n")) + "$", start, count);
+
+    string regex;
+    if (flags & FLAG_ENLNX_ALL_CHILDREN) regex = "\n.*";
+    if (flags & FLAG_ENLNX_IMMEDIATE_CHILDREN) regex = "\n[^\n]*";
+	return llLinksetDataFindKeys("^" + enString_EscapeRegex(enLNX_Head(flags) + llDumpList2String(name, "\n")) + regex + "$", start, count);
 }
 
 list enLNX_FindRegex(

@@ -29,7 +29,10 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 // typically used with FLAG_ENLNX_PRIM_SCOPE - uses the root prim's prim-scope datastore
 #define FLAG_ENLNX_ROOT 0x4
 
-#define FLAG_ENLNX_DELETE_CHILDREN 0x80000000
+#define FLAG_ENLNX_ALL_CHILDREN 0x8
+#define FLAG_ENLNX_IMMEDIATE_CHILDREN 0x10
+
+#define FLAG_ENLNX_RETURN_MEMORY_USED 0x20
 
 #define enLNX_Head(flags) \
     _enLNX_BuildHead(flags, llGetScriptName(), llGetKey())
