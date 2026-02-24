@@ -1,4 +1,4 @@
-/*
+--[[
 En Framework
 Copyright (C) 2024-26  Northbridge Business Systems
 https://docs.northbridgesys.com/en-framework
@@ -14,11 +14,12 @@ PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
 
 You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
-*/
+]]
 
-// each major revision of En increments this value
-#define EN_LIBRARIES_LOADED 1
+local en = {}
 
-// load macros, then functions
-#include "northbridge-sys/en-framework/lsl/_macros.lsl"
-#include "northbridge-sys/en-framework/lsl/_functions.lsl"
+en.Avatar = require("libraries/en.Avatar.luau")
+en.Environment = require("libraries/en.Environment.luau")
+en.UUID = require("libraries/en.UUID.luau")
+
+return en

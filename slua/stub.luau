@@ -1,4 +1,4 @@
-/*
+--[[
 En Framework
 Copyright (C) 2024-26  Northbridge Business Systems
 https://docs.northbridgesys.com/en-framework
@@ -14,11 +14,22 @@ PARTICULAR PURPOSE.  See the GNU Lesser General Public License for more details.
 
 You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
-*/
+]]
 
-// each major revision of En increments this value
-#define EN_LIBRARIES_LOADED 1
+-- master script for testing
 
-// load macros, then functions
-#include "northbridge-sys/en-framework/lsl/_macros.lsl"
-#include "northbridge-sys/en-framework/lsl/_functions.lsl"
+local en = require("./en")
+
+function main()
+    print("ready")
+    local group = en.Avatar.GetGroup(tostring(ll.GetOwner()))
+    print(`group: {group}`)
+    local ambient = en.Environment.AmbientLightHere()
+    print(`ambient: {ambient}`)
+    local daytime = en.Environment.IsDaytimeHere()
+    print(`daytime: {daytime}`)
+    local sun = en.Environment.SunHeightHere()
+    print(`sun: {sun}`)
+end
+
+main()
