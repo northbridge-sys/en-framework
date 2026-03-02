@@ -6,15 +6,17 @@
 
 ## Introduction
 
-**En is under active and ongoing development; many functions have not been fully tested. Do not use this framework in your projects until this message is removed! It is experimental and highly unstable!**
+**We strongly recommend just using SLua. Do not use this project for production code.**
 
-An unofficial framework for the [Linden Scripting Language](https://wiki.secondlife.com/wiki/LSL_Portal) and [SLua](https://create.secondlife.com/script/) in [Second Life](https://secondlife.com/).
+**En is unfinished and these functions are not guaranteed to be safe to use! It is unlikely any major work will be done on En considering SLua's broad improvements render it mostly obsolete. It is hosted here for informational purposes only.**
+
+An unofficial framework for the [Linden Scripting Language](https://wiki.secondlife.com/wiki/LSL_Portal) in [Second Life](https://secondlife.com/).
 
 *"Second Life®" is a trademark of Linden Research, Inc., d/b/a Linden Lab. Northbridge Business Systems and the En framework are are not affiliated with or sponsored by Linden Research.*
 
-LSL and SLua are the native scripting languages used to control Second Life objects. Certain third-party viewers incorporate an [LSL preprocessor](https://wiki.firestormviewer.org/fs_preprocessor) that provides C-style preprocessor macros via the built-in script editor. The En Framework leverages the `#include` and `#define` macros, along with the built-in script optimizer, to make dozens of helper functions available to LSL scripts. It can also be used with the [official Second Life VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin) to provide similar support in SLua using `require()`.
+LSL and SLua are the native scripting languages used to control Second Life objects. Certain third-party viewers incorporate an [LSL preprocessor](https://wiki.firestormviewer.org/fs_preprocessor) that provides C-style preprocessor macros via the built-in script editor. The En Framework leverages the `#include` and `#define` macros, along with the built-in script optimizer, to make dozens of helper functions available to LSL scripts. It can also be used with the [official Second Life VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin).
 
-**SLua support is currently incomplete and untested until SLua is available on a Linux-compatible viewer.**
+**SLua is not supported.**
 
 ## Key Features
 
@@ -45,8 +47,6 @@ Or, for the current **stable** release, or if you don't want to use git:
 Note that you'll need to repeat this process for each update; there is no auto-updater.
 
 ## Usage
-
-**The complete reference guide for En is located on the [NBS Documentation portal](https://docs.northbridgesys.com/en-framework).**
 
 ### Overview
 
@@ -131,13 +131,6 @@ En is intended for complex projects, especially "networked" scripts - that is, o
 For example, if an object has multiple scripts in a prim and you need to use `llMessageLinked` to send a message to one of them, there is simply no way to do that without triggering `link_message` in every single script in the prim. enRPC, therefore, includes a filter to optionally target a specific script, so if/when a different script receives that message, the enRPC handler in the other script will drop the event as quickly as possible to reduce script time instead of wasting time processing the message further.
 
 While we use En for most of our projects, there are still some limited circumstances where raw LSL is good enough or provides a slight edge in performance. Generally, En is designed for scaling at the expense of script memory and some limited performance in certain scenarios in simple scripts. It is primarily efficient in a code-factoring sense - that is, by using En functions, En scripts do not unnecessarily duplicate code that could be consolidated into a single function.
-
-### Why use En/LSL compared to Lua/Luau/"SLuau"?
-
-Several reasons:
-- LSL scripts often do not justify being rewritten entirely in Lua. We have over 20 years of products and services built in LSL in varying states of completion and support; many En concepts are formalizations of unwritten standards and practices that can be easily "transposed" into En to improve maintainability of existing scripts without needing to completely rewrite them in Luau.
-- En development began before Luau implementation was announced. For most of En's development, "SLua" had no preprocessing or `require`s, making it impossible to implement En in anything other than LSL. With the release of the official [SL VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin), these features now exist for SLua.
-- Luau support is currently in open beta and is limited to specific Luau-enabled regions. When Luau is released to production regions and is editable in a Linux viewer, we will port En to it, because key Luau features happen to be the core purpose of the En framework anyway (data structures, dynamic event subscription, multiple event handlers, coroutines, multiple timers), so a lot of the extant En superstructure can be simplified in Luau.
 
 ### Don't the additional function definitions increase script memory?
 
