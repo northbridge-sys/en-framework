@@ -14,49 +14,153 @@ An unofficial framework for the [Linden Scripting Language](https://wiki.secondl
 
 LSL and SLua are the native scripting languages used to control Second Life objects. Certain third-party viewers incorporate an [LSL preprocessor](https://wiki.firestormviewer.org/fs_preprocessor) that provides C-style preprocessor macros via the built-in script editor. The En Framework leverages the `#include` and `#define` macros, along with the built-in script optimizer, to make dozens of helper functions available to LSL scripts. It can also be used with the [official Second Life VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin) to provide similar support in SLua using `require()`.
 
-**SLua support is currently incomplete and untested until SLua is available on a Linux-compatible viewer.**
-
 ## Key Features
 
 Some of the useful features En provides:
 
-- enLog - a standardized logging interface that can be configured for "in-the-field" debugging
+- enConsole - a standardized logging interface that can be configured for "in-the-field" debugging
 - enRPC - heavily extended `llMessageLinked` and `llListen`-like functions
 - enLNX - functions to safely write, read, and manipulate key-value pairs in the `llLinksetData*` store
-- enKVS - simple in-memory key-value store, particularly useful for backing up critical linkset data
-- enTimer - `llSetTimerEvent` with string callbacks, multiple concurrent timers, and one-shot timers
+- enKVS - simple in-memory key-value store (LSL only)
+- enTimers - `LLTimers` simulacrum for LSL, allowing string callbacks, multiple concurrent timers, and one-shot timers
 - Helper libraries for integers (including hex & bitwise), floats, vectors, rotations, strings, lists, and keys
 - Miscellaneous additional libraries for avatars, environments, inventory, object parameters, and time/dates
 - Complete utility scripts
 
 ## Installation
 
-If you haven't, enable the LSL preprocessor in your viewer and set the directory where the LSL preprocessor will check for include files. This can be any directory, as long as the Second Life viewer can read from it, though we recommend placing it somewhere you won't accidentally delete it, such as a folder in your user directory.
+You'll need to set up an include directory somewhere on your local computer that stores all scripts you want to use in Second Life. For more information on how to do this, see **Include/Require Instructions**.
 
 For the latest **development** release:
-- Create a directory called `northbridge-sys` in your LSL preprocessor include directory, if you haven't already.
+- Create a directory called `northbridge-sys` in your include directory if it doesn't exist.
 - Inside the `northbridge-sys` directory, clone the repository into your preprocessor include directory using the command `git clone https://github.com/northbridge-sys/en-framework.git`. This will create the `en-framework` directory and clone the latest commit into it.
 
-Or, for the current **stable** release, or if you don't want to use git:
-- Create a directory called `northbridge-sys` in your LSL preprocessor include directory, if you haven't already.
+Or, for the current **stable** release, or if you don't want to use git (you should, especially for your own code!):
+- Create a directory called `northbridge-sys` in your include directory if it doesn't exist.
 - Create a directory called `en-framework` in the `northbridge-sys` directory.
-- [Download](https://github.com/northbridge-sys/en-framework/archive/main.zip) and unpack the repository into the `en-framework` directory, so that `README.md` is located in `[preprocessor directory]/northbridge-sys/en-framework/README.md` (or with backslashes - \ - for Windows users). **Make sure you don't name the folder "en-framework-main", or the framework won't load correctly!**
+- [Download](https://github.com/northbridge-sys/en-framework/archive/main.zip) and unpack the repository into the `en-framework` directory, so that `README.md` is located in `[include directory]/northbridge-sys/en-framework/README.md` (or with backslashes - \ - for Windows users). **Make sure you don't name the folder "en-framework-main", or the framework won't load correctly!**
 
 Note that you'll need to repeat this process for each update; there is no auto-updater.
 
-## Usage
+Depending on if you want LSL or SLua support, follow one or both of the following sections:
 
-**The complete reference guide for En is located on the [NBS Documentation portal](https://docs.northbridgesys.com/en-framework).**
+### LSL Configuration
 
-### Overview
+*If you're only interested in SLua, you can skip this section.*
 
-Include the framework libraries by placing the following line at the top of your script:
+LSL requires the LSL Preprocessor. If you have not used it before, there are several methods:
+- Preprocessing automatically in [Visual Studio Code](https://code.visualstudio.com/) using the [official Second Life VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin) to connect to a running Second Life viewer to upload preprocessed scripts
+- Writing directly in any editor you want, and `#include` entire LSL scripts at compile time using a third-party viewer with a built-in LSL Preprocessor, such as [Firestorm Viewer](https://www.firestormviewer.org/)
+- Both of the above combined (the official plugin also checks for errors as you type, and VSCode is better than the built-in editor)
+
+If you install the official VSCode plugin, make sure to install the additional recommended plugins.
+
+For the viewer and/or VSCode to know where the En Framework (and your other scripts) are loaded, you will need to set the preprocessor include path in both your viewer and the VSCode plugin's configurations; see their respective instructions.
+
+Make sure to enable the "script optimizer" option in your preprocessor(s); En libraries are all loaded together and will crash your compiler if it is not enabled.
+
+**Note that there is currently a bug in the VSCode preprocessor that causes it to break on certain libraries; this causes spurious error underlining, but the script can still compile and run.**
+
+### SLua Configuration
+
+*If you're only interested in LSL, you can skip this section.*
+
+SLua currently requires [Visual Studio Code](https://code.visualstudio.com/) and the [official Second Life VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin). Make sure to install the additional recommended plugins. No viewers have built-in support for SLua `require()` processing as of this version.
+
+The general process for setting up script association in VSCode is as follows:
+
+1. If you expect to use `@file` (recommended), open the settings for the extension and enable the following (and any other options you want):
+    1. *Include File Meta In Output*
+    1. *Use File Meta For Matching*
+1. Create a project folder (see **Include/Require Instructions** below).
+1. In VSCode, create a new workspace by opening that folder in a new window. You can open the folder in an existing workspace, but in-world scripts will only associate to master scripts in the first folder you open in the workspace (you can require ModuleScripts from other folders).
+1. Add any additional folders (typically libraries containing one or more ModuleScripts) into the workspace.
+1. In the original folder, create a file ending in “.luau”. It can be in a subdirectory, like “subdirectory/example.luau”. This will be the master script, where you do all editing.
+1. In SL, create a script in an object. There are two ways to associate this script to a master script in VSCode, use only one:
+    1. The safest method is to add the line (adapt to your needs): `--@file New Script.luau`  to the top of the script before editing it. This must point to the master file in relation to the original folder and can include subdirectories of your project directory. Don’t include the name of the original folder.
+    1. If there is no `--@file` directive, you must name the script the same name as a file in the original folder (with or without “.luau”), like “New Script” or “New Script.luau”.
+        1. Don’t include any folder names; this will search through the entire original folder and all subdirectories for a name match. If there are multiple matches, the first is used (this appears alphabetical, but this use case should be avoided in general, so it wasn’t tested).
+        1. Note that the script name as shown in the built-in editor is sent to VSCode for association when you click [Edit…]. In the vanilla viewer, the script name does not update in the built-in editor if it is open while you rename the script in the object’s inventory - it must be closed and reopened.
+        1. Be careful - if you have *Include File Meta In Output* enabled, a `--@file` directive is added to the finished file and will be used whenever re-editing this script from the viewer, overriding the script name. You’ll need to change the `--@file` directive instead of renaming the script if you change the name of the master script on your PC.
+1. Open the script (if it is not yet open) and click [Edit…] in the lower right. This will open VSCode and attempt to associate the script with a master script in the original folder of the active workspace using one of the above methods. If an association is made, VSCode will also open the master script in another tab, leaving the preprocessed source tab in the background.
+1. Perform all edits in the master script. When you save it, VSCode will preprocess it, send it back to your Second Life viewer, and Second Life will save it and start running it.
+    1. This preprocessing is only performed if the temporary script is open in VSCode, so keep both tabs open until you’re finished.
+1. When finished, close both tabs. To reopen the script in VSCode, just open it and click [Edit…] again.
+
+SLua does not currently support tree-shaking; all code you write or require counts against memory, and duplicate requires cost memory. Therefore, SLua modules must be required manually.
+
+## Include/Require Instructions
+
+Unless you have a reason not to, you should store all of your LSL and SLua files somewhere within a unified "include directory" for Second Life scripts on your PC; typically in your Documents or home directory. Your include directory should be set wherever you need an LSL preprocessor include path. (To make it easier to load third-party libraries, we recommend doing this even for SLua, which does not currently support a predefined include path.)
+
+Ideally, your include directory should look like this:
+
+```
+. (include directory)
+├── my-organization
+│   └── my-project
+│       ├── .luaurc
+│       └── New Script.luau
+└── northbridge-sys
+    └── en-framework
+        ├── lsl
+        │   ├── event-handlers
+        │   │   └── ...
+        │   ├── libraries
+        │   │   └── ...
+        │   ├── utilities
+        │   │   └── ...
+        │   ├── \_functions.lsl
+        │   ├── \_macros.lsl
+        │   ├── event-handlers.lsl
+        │   └── libraries.lsl
+        ├── slua
+        │   ├── modules
+        │   │   └── ...
+        │   └── tests
+        │       └── ...
+        ├── LICENSE
+        └── README.md
+```
+
+### #include (LSL)
+
+En LSL scripts must be written in the following order, top to bottom:
+
+First, `#define` any needed `EVENT_`, `FEATURE_`, `OVERRIDE_`, and `TRACE_` flags:
+
+```
+// for example:
+#define EVENT_EN_STATE_ENTRY
+#define OVERRIDE_ENLOG_DEFAULT_LOGLEVEL 6
+```
+
+Then, include all LSL libraries (unused code gets removed by the "script optimizer" option):
 
 ```
 #include "northbridge-sys/en-framework/lsl/libraries.lsl"
 ```
 
-Then, in the script body, include the framework event handlers in each state
+Then, write En event passthrough handlers and any other script code:
+
+```
+touched_by(key avatar)
+{
+    enLog_SuccessTo(avatar, "Touched.")
+}
+
+en_state_entry()
+{
+    enLog_Info("Hello, Avatar!")
+}
+
+en_touch_start(integer num)
+{
+    touched_by(llDetectedKey(num))
+}
+```
+
+Then, include the event handlers as the entire `default` state:
 
 ```
 default
@@ -65,50 +169,46 @@ default
 }
 ```
 
-To run your own code on an event, most events can be forwarded to user-defined functions upon request:
+Compile and run. If your preprocessor include path is set correctly, it should run!
+
+### require() (SLua)
+
+If you followed the recommended include directory layout, copy the `.luaurc` file from the `en-framework/slua` directory into the root of your project; it should create a link back through your include directory. If not, you may need to correct the path in `.luaurc` depending on your file layout.
+
+Libraries (modules or ModuleScripts) can then be loaded individually using `require()` at the top of any script in that project:
 
 ```
-#define EVENT_EN_STATE_ENTRY
-#define EVENT_EN_ON_REZ
-
-#include "northbridge-sys/en-framework/lsl/libraries.lsl"
-
-en_state_entry()
-{
-    // runs on state_entry if EVENT_EN_STATE_ENTRY has been defined
-}
-
-en_on_rez( integer param )
-{
-    // runs on on_rez if EVENT_EN_ON_REZ has been defined
-}
-
-// ...
+local enConsole = require("@en-framework/enConsole")
 ```
 
-You can also #define additional options for library features and override default constants; see the documentation for details.
+We recommend requiring each module into its own table so that its function names match the documentation.
 
-No matter what, if you need to define any preprocessor values, make sure you do so *above* `#include "northbridge-sys/en-framework/lsl/libraries.lsl"`.
+Note that you should not `require()` more than the modules you need for your script; SLua does no optimization of unused code.
+
+## Reference Guide
+
+The complete reference guide for En is located on the [NBS Documentation portal](https://docs.northbridgesys.com/en-framework).
 
 ## Frequently Asked Questions
 
 ### Why?
 
-LSL is over twenty years old and still has no function that returns a random integer. While it's still fun, coding in any other language makes LSL feel barbaric.
+LSL kind of sucks. A lot of code snippets end up copied and pasted across multiple projects, each with its own tweaks and bugs. Most LSL code is ugly, incomprehensible, and unmaintainable.
 
-While LSL does enjoy occasional improvements, a lot of code snippets end up copied and pasted across multiple projects, each with its own tweaks and bugs. Most LSL code is, as a result, ugly, incomprehensible, and unmaintainable.
+Many Second Life viewers provide the ability to use an external LSL editor, and some also include the LSL preprocessor, a tool that allows developers to use a limited set of C preprocessor directives to manipulate LSL source code. Additionally, En began development a few years before the release of SLua, which incidentally provides a lot of similar functionality.
 
-Many Second Life viewers provide the ability to use an external LSL editor, and some also include the LSL preprocessor, a tool that allows developers to use a limited set of C preprocessor directives to manipulate LSL source code.
+We (well, I) developed the En Framework to accomplish three things:
+- I develop a lot of different projects at the same time that share the same code or need to take advantage of the same tricks (or avoid the same pitfalls). Saving all of these tricks into a shared library makes it possible to push fixes and other improvements automatically when compiling any script. Eventually, since LSL does not support runtime event subscription, this necessitated a framework to automatically build event handlers to catch certain events when hooked by preprocessor definitions or other library functions.
+- The built-in functions for inter-script data storage and transfer essentially only store and send raw strings; any protocols necessary to send anything more must be implemented manually. Defining standard methods for communicating with scripts and storing data ensures long-term cross-product compatibility, and doing it with a framework allows scripts to be high-level, cleaner, and easier to maintain. We strive to make it easy to mod our products, so offering the underlying framework helps interested scripters be familiar with many products by learning only a few library functions.
+- En LSL scripts are naturally compatible with En SLua scripts; for example, regardless of which language you use, enLNX implements the same open [LNX](https://gsi.sh/rec/lnx) datastore namespace standard, and enRPC implements the same open [CLEP](https://gsi.sh/rec/clep) protocol and [SNEP](https://gsi.sh/rec/snep) signatures. This is important because LSO2-compiled LSL scripts, while slow, cross between regions very quickly, so still have some utility.
 
-We develop a lot of different projects at the same time that share the same code or need to take advantage of the same tricks (or avoid the same pitfalls), so the preprocessor lets us call functions out of shared LSL libraries. If we need to add or change something in a library, all it takes is recompiling all the scripts that use that library instead of manually copying and pasting the code to each script. This simplifies development across multiple product lines and facilitates rapid prototyping and development of complex LSL scripts.
-
-The overarching strategy of En is to focus on the code, not the infrastructure. Thanks to the LSL preprocessor, these additional functions and background routines just work.
+The overarching strategy of En is to let scripters focus on the code, not the infrastructure.
 
 ### How does it work?
 
-The LSL preprocessor makes all of the helper functions defined in the En libraries available within LSL scripts. Since the LSL preprocessor can automatically remove functions that aren't referenced in the final script, these functions are only compiled into the script if they are called; otherwise, they don't take any script memory.
+For LSL, the LSL Preprocessor makes all of the helper functions defined in the En libraries available within LSL scripts. Since the LSL Preprocessor can automatically remove functions that aren't referenced in the final script, these functions are only compiled into the script if they are called; otherwise, they don't take any script memory. Additionally, the En framework creates and redirects event handlers (`state_entry`, `link_message`, etc.) dynamically based on the functionality you enable to optimize script performance. If you need to handle certain events yourself, En can do so by passing them through to user-defined functions. If an event handler isn't needed for an En feature and you don't specifically request it, it won't be added to the compiled script.
 
-Additionally, the En framework creates and redirects event handlers (`state_entry`, `link_message`, etc.) dynamically based on the functionality you enable to optimize script performance. If you need to handle certain events yourself, En can do so by passing them through to user-defined functions. If an event handler isn't needed for an En feature and you don't specifically request it, it won't be added to the compiled script.
+For SLua, the En framework is only a set of modules; SLua's LLEvents library allows modules to independently hook into events, so no preprocessor is required except to resolve `require()`s.
 
 Certain En features require that you define certain flags or variables before they work to minimize unnecessary memory usage and script time; see [the documentation](https://docs.northbridgesys.com/en-framework) for more information.
 
@@ -122,9 +222,9 @@ Certain En features require that you define certain flags or variables before th
 
 - Neal Stephenson, *Snow Crash* (1992).
 
-The En framework provides a "central database" of "little programs" for all sorts of "functions" in the "society" of LSL, of which many need to be "properly timed" to run on certain events... so the name just made sense.
+The En framework provides a "central database" of "little programs" for all sorts of "functions" in the "society" of scripting, of which many need to be "properly timed" to run on certain events... so the name just made sense.
 
-### Why use En compared to raw LSL?
+### Why use En/LSL compared to raw LSL?
 
 En is intended for complex projects, especially "networked" scripts - that is, one or more objects with multiple scripts that need a standardized and efficient way to communicate with each other. The performance impact of multiple scripts in an object is trivial, but LSL is not designed to handle these sorts of scenarios well at runtime.
 
@@ -132,11 +232,12 @@ For example, if an object has multiple scripts in a prim and you need to use `ll
 
 While we use En for most of our projects, there are still some limited circumstances where raw LSL is good enough or provides a slight edge in performance. Generally, En is designed for scaling at the expense of script memory and some limited performance in certain scenarios in simple scripts. It is primarily efficient in a code-factoring sense - that is, by using En functions, En scripts do not unnecessarily duplicate code that could be consolidated into a single function.
 
-### Why use En/LSL compared to Lua/Luau/"SLuau"?
+### Why use En/LSL compared to SLua in general?
 
 Several reasons:
+- LSO2-compiled scripts cross region borders quicker than any other scripts; this is useful for, e.g., vehicles with small scripts that cannot be consolidated due to technical limitations.
 - LSL scripts often do not justify being rewritten entirely in Lua. We have over 20 years of products and services built in LSL in varying states of completion and support; many En concepts are formalizations of unwritten standards and practices that can be easily "transposed" into En to improve maintainability of existing scripts without needing to completely rewrite them in Luau.
-- En development began before Luau implementation was announced. For most of En's development, "SLua" had no preprocessing or `require`s, making it impossible to implement En in anything other than LSL. With the release of the official [SL VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin), these features now exist for SLua.
+- En development began before Luau implementation was announced. For most of En's development, "SLua" had no preprocessing or `require()`s, making it impossible to implement En in anything other than LSL. With the release of the official [SL VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin), these features now exist for SLua.
 - Luau support is currently in open beta and is limited to specific Luau-enabled regions. When Luau is released to production regions and is editable in a Linux viewer, we will port En to it, because key Luau features happen to be the core purpose of the En framework anyway (data structures, dynamic event subscription, multiple event handlers, coroutines, multiple timers), so a lot of the extant En superstructure can be simplified in Luau.
 
 ### Don't the additional function definitions increase script memory?
@@ -149,8 +250,8 @@ Passing events to user-defined functions only adds a trivial amount of memory us
 
 ### If I don't need any of the En functions, why use En at all?
 
-You don't have to! But En also provides a limited set of basic functionality that is always enabled unless specifically disabled via flags. For example, if the `"stop"` linkset data pair contains a truthy value, En will automatically stop the script on `state_entry`. This can be used for, e.g., updater and script distribution tools that have scripts inside them that must never run until added to another object.
+En also provides a limited set of basic functionality that is always enabled unless specifically disabled via flags. For example, if the `"stop"` linkset data pair contains a truthy value, En will automatically stop the script on `state_entry`. This can be used for, e.g., updater and script distribution tools that have scripts inside them that must never run until added to another object.
 
 ## License
 
-The En Framework is licensed under the GNU Lesser General Public License v3.0. In short, you (yes, you!) may use the En Framework in any LSL scripts - whether commercial or non-commercial - but you may not redistribute the En Framework itself, in whole or in part, as a derivative work under any other license. Northbridge Business Systems and contributors to the En Framework cannot be held liable for legal issues or damages due to its use.
+The En Framework is licensed under the GNU Lesser General Public License v3.0. In short, you (yes, you!) may use the En Framework in any scripts - whether commercial or non-commercial - but you may not redistribute the En Framework itself, in whole or in part, as a derivative work under any other license. Northbridge Business Systems and contributors to the En Framework cannot be held liable for legal issues or damages due to its use.
