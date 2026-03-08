@@ -6,18 +6,18 @@ local enEscape = require("enEscape")
 local enLNX = {}
 
 -- "constants"
-enLNX.Scope = {
-    Linkset = "L",
-    Prim = "P",
-    Script = "S"
+enLNX.SCOPE = {
+    LINKSET = "L",
+    PRIM = "P",
+    SCRIPT = "S"
 }
 enLNX._scriptname = ""
 enLNX._primuuid = NULL_KEY
 
 function enLNX._Header(scope: string): string
-    if scope == enLNX.Scope.Script then
+    if scope == enLNX.SCOPE.SCRIPT then
         return tostring(ll.GetKey()) .. "\n" .. ll.GetScriptName() .. "\n"
-    elseif scope == enLNX.Scope.Prim then
+    elseif scope == enLNX.SCOPE.PRIM then
         return tostring(ll.GetKey()) .. "\n\n"
     else
         return "\n\n"
@@ -41,31 +41,31 @@ function enLNX.Read(scope: string, path: {string}): string?
 end
 
 function enLNX.Reset(scope: string): {}
-    return ll.LinksetDataDeleteFound(`^{Escape.Regex(enLNX._Header(scope))}.*$`, "")
+    return ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope))}.*$`, "")
 end
 
 function enLNX.Delete(scope: string, path: {string}): {}
-    return ll.LinksetDataDeleteFound(`^{Escape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}$`, "")
+    return ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}$`, "")
 end
 
 function enLNX.DeleteChildren(scope: string, path: {string}): {}
-    return ll.LinksetDataDeleteFound(`^{Escape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}\n[^\n]*$`, "")
+    return ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}\n[^\n]*$`, "")
 end
 
 function enLNX.DeleteChildrenRecursive(scope: string, path: {string}): {}
-    return ll.LinksetDataDeleteFound(`^{Escape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}\n.*$`, "")
+    return ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}\n.*$`, "")
 end
 
 function enLNX.Find(scope: string, path: {string}, start: number?, count: number?): {}
-    return ll.LinksetDataFindKeys(`^{Escape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}$`, start or 1, count or 0)
+    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}$`, start or 1, count or 0)
 end
 
 function enLNX.FindChildren(scope: string, path: {string}, start: number?, count: number?): {}
-    return ll.LinksetDataFindKeys(`^{Escape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}\n[^\n]*$`, start or 1, count or 0)
+    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}\n[^\n]*$`, start or 1, count or 0)
 end
 
 function enLNX.FindChildrenRecursive(scope: string, path: {string}, start: number?, count: number?): {}
-    return ll.LinksetDataFindKeys(`^{Escape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}\n.*$`, start or 1, count or 0)
+    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}\n.*$`, start or 1, count or 0)
 end
 
 function enLNX.Exists(scope: string, path: {string}): boolean
@@ -73,11 +73,11 @@ function enLNX.Exists(scope: string, path: {string}): boolean
 end
 
 function enLNX.FindRegex(scope: string, regex: string, start: number?, count: number?): {}
-    return ll.LinksetDataFindKeys(`^{Escape.Regex(enLNX._Header(scope))}{regex}$`, start or 1, count or 0)
+    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope))}{regex}$`, start or 1, count or 0)
 end
 
 function enLNX.DeleteRegex(scope: string, regex: string): {}
-    return ll.LinksetDataDeleteFound(`^{Escape.Regex(enLNX._Header(scope))}{regex}$`, "")
+    return ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope))}{regex}$`, "")
 end
 
 function enLNX._Purge(): ()
@@ -103,7 +103,7 @@ function enLNX._Purge(): ()
                     i = 0 -- start search again (lazy)
                 elseif path[2] ~= "" and path[1] == tostring(ll.GetKey()) and ll.GetInventoryType(path[2]) ~= INVENTORY_SCRIPT then
                     -- this is a script-scope pair in our prim, and the script is no longer in this prim, so delete it
-                    local results = ll.LinksetDataDeleteFound(`^{keys[1]}\n{Escape.Regex(path[2])}\n.*$`, "") -- delete all pairs scoped to this prim and missing script
+                    local results = ll.LinksetDataDeleteFound(`^{keys[1]}\n{enEscape.Regex(path[2])}\n.*$`, "") -- delete all pairs scoped to this prim and missing script
                     enConsole.Trace(`Purged {results[1]} LNX pairs for script "{path[2]}" prim {keys[1]} root {key_root}`)
                     i = 0 -- start search again (lazy)
                 end
@@ -135,7 +135,7 @@ end
 function enLNX._MigratePrim(old_prim_uuid: uuid): ()
     if not old_prim_uuid or old_prim_uuid == uuid(NULL_KEY) or old_prim_uuid == ll.GetKey() then return end
     enConsole.Debug(`Migrating LNX datastore for prim {old_prim_uuid} to prim {ll.GetKey()}`)
-    local keys = ll.LinksetDataFindKeys(`^{Escape.Regex(tostring(old_prim_uuid))}\n.*\n.*$`, 1, 1)
+    local keys = ll.LinksetDataFindKeys(`^{enEscape.Regex(tostring(old_prim_uuid))}\n.*\n.*$`, 1, 1)
     while keys[1] do
         local s_old_key = tostring(keys[1])
         local old_key = string.split(s_old_key, "\n")
@@ -147,14 +147,14 @@ function enLNX._MigratePrim(old_prim_uuid: uuid): ()
         ll.LinksetDataWrite(table.concat(new_key, "\n"), ll.LinksetDataRead(s_old_key))
         ll.LinksetDataDelete(s_old_key)
         enConsole.Trace(`LNX pair \{{table.concat(old_key, ",")}\} prim-migrated to \{{table.concat(new_key, ",")}\}`)
-        keys = ll.LinksetDataFindKeys(`^{Escape.Regex(tostring(old_prim_uuid))}\n.*\n.*$`, 1, 1)
+        keys = ll.LinksetDataFindKeys(`^{enEscape.Regex(tostring(old_prim_uuid))}\n.*\n.*$`, 1, 1)
     end
 end
 
 function enLNX._MigrateScript(old_script_name: string): ()
     if old_script_name == "" then return end
     enConsole.Debug(`Migrating LNX datastore for script "{old_script_name}"`)
-    local keys = ll.LinksetDataFindKeys(`^{ll.GetKey()}\n{Escape.Regex(old_script_name)}\n.*$`, 1, 1)
+    local keys = ll.LinksetDataFindKeys(`^{ll.GetKey()}\n{enEscape.Regex(old_script_name)}\n.*$`, 1, 1)
     while keys ~= {} do
         local s_old_key = tostring(keys[1])
         local old_key = string.split(s_old_key, "\n")
@@ -166,7 +166,7 @@ function enLNX._MigrateScript(old_script_name: string): ()
         ll.LinksetDataWrite(table.concat(new_key, "\n"), ll.LinksetDataRead(s_old_key))
         ll.LinksetDataDelete(s_old_key)
         enConsole.Trace(`LNX pair \{{table.concat(old_key, ",")}\} script-migrated to \{{table.concat(new_key, ",")}\}`)
-        keys = ll.LinksetDataFindKeys(`^{ll.GetKey()}\n{Escape.Regex(old_script_name)}\n.*$`, 1, 1)
+        keys = ll.LinksetDataFindKeys(`^{ll.GetKey()}\n{enEscape.Regex(old_script_name)}\n.*$`, 1, 1)
     end
 end
 
@@ -215,4 +215,4 @@ if enLNX._primuuid == uuid(NULL_KEY) then
 end
 enLNX._CheckPrimUUID() -- if old prim uuid changed, that means we are a new copy (most likely shift-dragged but not necessarily), so this will migrate the prim
 
-return LNX
+return enLNX
