@@ -1,6 +1,6 @@
 {
     "aliases": {
         "___README": "This is a configuration file used by VSCode to determine the path of @en-framework in your require()s. If you followed the recommended file structure, this file should be placed in the root of your project, such that (include path)/northbridge-sys/en-framework/.luaurc is moved to (include path)/my-organization/my-project/.luaurc  -- Note: If you are using multiple modules that require separate .luaurc files in a single project, you'll need to combine them all into one.",
-        "en-framework": "../../northbridge-sys/en-framework/slua/libraries"
+        "en-framework": "../../northbridge-sys/en-framework/slua/modules"
     }
 }
