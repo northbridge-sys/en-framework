@@ -22,9 +22,6 @@ function enRPC.CLEPChannel(domain: string): number
     return channel
 end
 
--- initialize DIALOG_CHANNEL constant
-enRPC.DIALOG_CHANNEL = enRPC.CLEPChannel(tostring(ll.GetInventoryKey(ll.GetScriptName())))
-
 function enRPC.LEPListen(domain: string?, handler_function: (payload: {}) -> ()): ()
 
     enConsole.Trace(`enRPC.LEPListen("{domain}", ...)`)
