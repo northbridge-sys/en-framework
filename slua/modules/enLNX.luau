@@ -155,7 +155,7 @@ function enLNX._MigrateScript(old_script_name: string): ()
     if old_script_name == "" then return end
     enConsole.Debug(`Migrating LNX datastore for script "{old_script_name}"`)
     local keys = ll.LinksetDataFindKeys(`^{ll.GetKey()}\n{enEscape.Regex(old_script_name)}\n.*$`, 1, 1)
-    while keys ~= {} do
+    while keys[1] do
         local s_old_key = tostring(keys[1])
         local old_key = string.split(s_old_key, "\n")
         local new_key = {}
