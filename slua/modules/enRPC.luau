@@ -210,13 +210,13 @@ function enRPC.Send(
         script: string?
     },
     domain: string,
-    id: uuid?,
     method: {string},
     params: any?,
+    id: uuid?,
     result: any?
 ): ()
 
-    --nbsToolkit.Log.Trace(`nbsToolkit.enRPC.Send(..., {target}, {domain}, {id}, {method}, {params}, {result}) ➔ ...`)
+    --nbsToolkit.Log.Trace(`nbsToolkit.enRPC.Send(..., {target}, {domain}, {method}, {params}, {id}, {result}) ➔ ...`)
 
     local payload = {
         timestamp = os.time(),
