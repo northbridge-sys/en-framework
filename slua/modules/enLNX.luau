@@ -14,11 +14,13 @@ enLNX.SCOPE = {
 enLNX._scriptname = ""
 enLNX._primuuid = NULL_KEY
 
-function enLNX._Header(scope: string): string
+function enLNX._Header(scope: string, linknum: number?): string
     if scope == enLNX.SCOPE.SCRIPT then
         return tostring(ll.GetKey()) .. "\n" .. ll.GetScriptName() .. "\n"
     elseif scope == enLNX.SCOPE.PRIM then
-        return tostring(ll.GetKey()) .. "\n\n"
+        local key = ll.GetKey()
+        if linknum then key = ll.GetLinkKey(linknum) end
+        return tostring(key) .. "\n\n"
     else
         return "\n\n"
     end
@@ -32,52 +34,71 @@ function enLNX.PairToPath(pair: string): {string}
     return path
 end
 
-function enLNX.Write(scope: string, path: {string}, data: string?): boolean
-    return ll.LinksetDataWrite(enLNX._Header(scope) .. table.concat(path, "\n"), data or "") ~= 0
+function enLNX.Write(scope: string, path: {string}, data: string?, linknum: number?): boolean
+    return ll.LinksetDataWrite(enLNX._Header(scope, linknum) .. table.concat(path, "\n"), data or "") ~= 0
 end
 
-function enLNX.Read(scope: string, path: {string}): string?
-    return ll.LinksetDataRead(enLNX._Header(scope) .. table.concat(path, "\n"))
+function enLNX.Read(scope: string, path: {string}, linknum: number?): string?
+    return ll.LinksetDataRead(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))
 end
 
-function enLNX.Reset(scope: string): {}
-    return ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope))}.*$`, "")
+function enLNX.Reset(scope: string, linknum: number?): (number, number)
+    local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum))}.*$`, "")
+    local deleted = tonumber(result[1])
+    local denied = tonumber(result[2])
+    if not deleted or not denied then return 0, 0 end
+    return deleted, denied
 end
 
-function enLNX.Delete(scope: string, path: {string}): {}
-    return ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}$`, "")
+function enLNX.Delete(scope: string, path: {string}, linknum: number?): boolean
+    if ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}$`, "")[1] == 1 then
+        return true
+    end
+    return false
 end
 
-function enLNX.DeleteChildren(scope: string, path: {string}): {}
-    return ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}\n[^\n]*$`, "")
+function enLNX.DeleteChildren(scope: string, path: {string}, linknum: number?): (number, number)
+    local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}\n[^\n]*$`, "")
+    local deleted = tonumber(result[1])
+    local denied = tonumber(result[2])
+    if not deleted or not denied then return 0, 0 end
+    return deleted, denied
 end
 
-function enLNX.DeleteChildrenRecursive(scope: string, path: {string}): {}
-    return ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}\n.*$`, "")
+function enLNX.DeleteChildrenRecursive(scope: string, path: {string}, linknum: number?): (number, number)
+    local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}\n.*$`, "")
+    local deleted = tonumber(result[1])
+    local denied = tonumber(result[2])
+    if not deleted or not denied then return 0, 0 end
+    return deleted, denied
 end
 
-function enLNX.Find(scope: string, path: {string}, start: number?, count: number?): {}
-    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}$`, start or 1, count or 0)
+function enLNX.Find(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {}
+    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}$`, start or 1, count or 0)
 end
 
-function enLNX.FindChildren(scope: string, path: {string}, start: number?, count: number?): {}
-    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}\n[^\n]*$`, start or 1, count or 0)
+function enLNX.FindChildren(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {}
+    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}\n[^\n]*$`, start or 1, count or 0)
 end
 
-function enLNX.FindChildrenRecursive(scope: string, path: {string}, start: number?, count: number?): {}
-    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope) .. table.concat(path, "\n"))}\n.*$`, start or 1, count or 0)
+function enLNX.FindChildrenRecursive(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {}
+    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}\n.*$`, start or 1, count or 0)
 end
 
-function enLNX.Exists(scope: string, path: {string}): boolean
+function enLNX.Exists(scope: string, path: {string}, linknum: number?): boolean
     return enLNX.Find(scope, path) ~= {}
 end
 
-function enLNX.FindRegex(scope: string, regex: string, start: number?, count: number?): {}
-    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope))}{regex}$`, start or 1, count or 0)
+function enLNX.FindRegex(scope: string, regex: string, start: number?, count: number?, linknum: number?): {}
+    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope, linknum))}{regex}$`, start or 1, count or 0)
 end
 
-function enLNX.DeleteRegex(scope: string, regex: string): {}
-    return ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope))}{regex}$`, "")
+function enLNX.DeleteRegex(scope: string, regex: string, linknum: number?): (number, number)
+    local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum))}{regex}$`, "")
+    local deleted = tonumber(result[1])
+    local denied = tonumber(result[2])
+    if not deleted or not denied then return 0, 0 end
+    return deleted, denied
 end
 
 function enLNX._Purge(): ()
@@ -178,7 +199,7 @@ function enLNX._CheckScriptName(): ()
 end
 
 function enLNX._CheckPrimUUID(): ()
-    if enLNX._primuuid and enLNX._primuuid ~= uuid(NULL_KEY) and ll.GetKey() ~= enLNX._primuuid then
+    if enLNX._primuuid and enLNX._primuuid ~= NULL_KEY and ll.GetKey() ~= enLNX._primuuid then
         enLNX._MigratePrim(enLNX._primuuid)
         enLNX._primuuid = ll.GetKey()
         enLNX._BackupPrimUUID()
@@ -208,7 +229,7 @@ end)
 
 enLNX._scriptname = ll.GetScriptName() -- presume the script name did not change, so just reset it
 enLNX._primuuid = enLNX._RecallPrimUUID() -- old prim uuid needs to be recovered from LNX backup
-if enLNX._primuuid == uuid(NULL_KEY) then
+if enLNX._primuuid == NULL_KEY then
     -- we had no backup, so back it up now
     enLNX._primuuid = ll.GetKey()
     enLNX._BackupPrimUUID()
