@@ -2,10 +2,11 @@
 
 local enTable = {}
 
-function enTable.Join(a: {}, b: {}): {}
-    for i = 1, #b do
-        a[#a + 1] = b[i]
-    end
+--[[
+Polyfill for table.extend until it shows up on main grid
+]]
+function enTable.Extend(a: {}, b: {}): {}
+    table.move(b, 1, #b, #a + 1, a)
     return a
 end
 
