@@ -16,8 +16,8 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// if we want to receive any CLEP messages, trigger _enRPC_listen()
-#if (defined FEATURE_ENRPC_PROTOCOL_CLEP || defined FEATURE_ENRPC_PROTOCOL_CLEP_INBOUND)
+// if we want to receive any CLEP messages, trigger _enCLEP_listen()
+#if (defined FEATURE_ENCLEP_PROTOCOL_CLEP || defined FEATURE_ENCLEP_PROTOCOL_CLEP_INBOUND)
     #define _EVENT_LISTEN
     #define _HOOK_ENRPC_LISTEN
 #endif
@@ -62,7 +62,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
         #endif
 
         #if defined _HOOK_ENRPC_LISTEN
-		    if (~_enRPC_listen(channel, name, id, message) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
+		    if (~_enCLEP_listen(channel, name, id, message) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
         #endif
         
 		#if defined _HOOK_EN_LISTEN

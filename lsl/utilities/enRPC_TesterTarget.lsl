@@ -1,11 +1,11 @@
 #define EVENT_EN_STATE_ENTRY
 #define EVENT_ENRPC_MESSAGE
 
-//#define FEATURE_ENRPC_PROTOCOL_ROUTING
-#define FEATURE_ENRPC_PROTOCOL_CLEP
-#define FEATURE_ENRPC_PROTOCOL_LEP
-//#define FEATURE_ENRPC_PROTOCOL_SIGNING
-//#define FEATURE_ENRPC_SIGNATURE_VERIFICATION
+//#define FEATURE_ENCLEP_PROTOCOL_ROUTING
+#define FEATURE_ENCLEP_PROTOCOL_CLEP
+#define FEATURE_ENCLEP_PROTOCOL_LEP
+//#define FEATURE_ENCLEP_PROTOCOL_SIGNING
+//#define FEATURE_ENCLEP_SIGNATURE_VERIFICATION
 
 #define OVERRIDE_STRING_ENRPC_LEP_DOMAIN "CLEP Test Domain"
 
@@ -19,11 +19,11 @@ string TESTER_KEY_NAME = "sample-rpc";
 
 en_state_entry()
 {
-    #if !defined FEATURE_ENRPC_PROTOCOL_SIGNING && !defined FEATURE_ENRPC_SIGNATURE_VERIFICATION
+    #if !defined FEATURE_ENCLEP_PROTOCOL_SIGNING && !defined FEATURE_ENCLEP_SIGNATURE_VERIFICATION
         TESTER_KEY_NAME = ""; // use a blank TESTER_KEY_NAME if signing is disabled, otherwise the messages will be dropped
     #endif
     
-    enRPC_Listen(OVERRIDE_STRING_ENRPC_LEP_DOMAIN, FLAG_ENRPC_LISTEN_OWNERONLY);
+    enCLEP_Listen(OVERRIDE_STRING_ENRPC_LEP_DOMAIN, FLAG_ENRPC_LISTEN_OWNERONLY);
 }
 
 enrpc_message(
@@ -52,7 +52,7 @@ enrpc_message(
     // respond to request
     if (flags & FLAG_ENRPC_PROTOCOL_LEP)
     {
-        enRPC_LEPResultSigned(
+        enCLEP_LEPResultSigned(
             TESTER_KEY_NAME, // this must match key_name above (not necessarily in the source)
             source_link, // you may send messages to any link or script, not just the source link
             source_script, // however, typically you'd only respond to the source_link and source_script that sent the request
@@ -65,7 +65,7 @@ enrpc_message(
     }
     if (flags & FLAG_ENRPC_PROTOCOL_CLEP)
     {
-        enRPC_CLEPResultSigned(
+        enCLEP_CLEPResultSigned(
             TESTER_KEY_NAME, // this must match key_name above (not necessarily in the source)
             source_region, // source region
             source_prim, // source prim

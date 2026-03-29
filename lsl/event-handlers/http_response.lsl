@@ -16,8 +16,8 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// if we want to receive responses to SNEP messages, trigger _enRPC_http_response()
-#if defined FEATURE_ENRPC_PROTOCOL_SNEP || defined FEATURE_ENRPC_PROTOCOL_SNEP_RESPONSE
+// if we want to receive responses to SNEP messages, trigger _enCLEP_http_response()
+#if defined FEATURE_ENCLEP_PROTOCOL_SNEP || defined FEATURE_ENCLEP_PROTOCOL_SNEP_RESPONSE
     #define _EVENT_HTTP_RESPONSE
     #define _HOOK_ENRPC_HTTP_RESPONSE
 #endif
@@ -65,7 +65,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
         #endif
 
         #if defined _HOOK_ENRPC_HTTP_RESPONSE
-		    if (~_enRPC_http_response(request, status, metadata, body) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
+		    if (~_enCLEP_http_response(request, status, metadata, body) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
         #endif
         
 		#if defined _HOOK_EN_HTTP_RESPONSE

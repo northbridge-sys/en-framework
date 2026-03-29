@@ -285,7 +285,7 @@ enPrim_UpdateUUIDs()
 
             // "hooks" to other En libraries that rely on UUID monitoring
             _enLNX_uuid_changed(record_key);
-            _enRPC_uuid_changed(record_key);
+            _enCLEP_uuid_changed(record_key);
 
             #if defined EVENT_ENPRIM_UUID_CHANGED
                 enobject_uuid_changed(

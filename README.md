@@ -19,7 +19,7 @@ LSL and SLua are the native scripting languages used to control Second Life obje
 Some of the useful features En provides:
 
 - enConsole - a standardized logging interface that can be configured for "in-the-field" debugging
-- enRPC - heavily extended `llMessageLinked` and `llListen`-like functions
+- enCLEP - heavily extended `llMessageLinked` and `llListen`-like functions
 - enLNX - functions to safely write, read, and manipulate key-value pairs in the `llLinksetData*` store
 - enKVS - simple in-memory key-value store (LSL only)
 - enTimers - `LLTimers` simulacrum for LSL, allowing string callbacks, multiple concurrent timers, and one-shot timers
@@ -200,7 +200,7 @@ Many Second Life viewers provide the ability to use an external LSL editor, and 
 We (well, I) developed the En Framework to accomplish three things:
 - I develop a lot of different projects at the same time that share the same code or need to take advantage of the same tricks (or avoid the same pitfalls). Saving all of these tricks into a shared library makes it possible to push fixes and other improvements automatically when compiling any script. Eventually, since LSL does not support runtime event subscription, this necessitated a framework to automatically build event handlers to catch certain events when hooked by preprocessor definitions or other library functions.
 - The built-in functions for inter-script data storage and transfer essentially only store and send raw strings; any protocols necessary to send anything more must be implemented manually. Defining standard methods for communicating with scripts and storing data ensures long-term cross-product compatibility, and doing it with a framework allows scripts to be high-level, cleaner, and easier to maintain. We strive to make it easy to mod our products, so offering the underlying framework helps interested scripters be familiar with many products by learning only a few library functions.
-- En LSL scripts are naturally compatible with En SLua scripts; for example, regardless of which language you use, enLNX implements the same open [LNX](https://gsi.sh/rec/lnx) datastore namespace standard, and enRPC implements the same open [CLEP](https://gsi.sh/rec/clep) protocol and [SNEP](https://gsi.sh/rec/snep) signatures. This is important because LSO2-compiled LSL scripts, while slow, cross between regions very quickly, so still have some utility.
+- En LSL scripts are naturally compatible with En SLua scripts; for example, regardless of which language you use, enLNX implements the same open [LNX](https://gsi.sh/rec/lnx) datastore namespace standard, and enCLEP/enSNEP implement the same open [CLEP](https://gsi.sh/rec/clep) protocol and [SNEP](https://gsi.sh/rec/snep) signatures. This is important because LSO2-compiled LSL scripts, while slow, cross between regions very quickly, so still have some utility.
 
 The overarching strategy of En is to let scripters focus on the code, not the infrastructure.
 
@@ -228,7 +228,7 @@ The En framework provides a "central database" of "little programs" for all sort
 
 En is intended for complex projects, especially "networked" scripts - that is, one or more objects with multiple scripts that need a standardized and efficient way to communicate with each other. The performance impact of multiple scripts in an object is trivial, but LSL is not designed to handle these sorts of scenarios well at runtime.
 
-For example, if an object has multiple scripts in a prim and you need to use `llMessageLinked` to send a message to one of them, there is simply no way to do that without triggering `link_message` in every single script in the prim. enRPC, therefore, includes a filter to optionally target a specific script, so if/when a different script receives that message, the enRPC handler in the other script will drop the event as quickly as possible to reduce script time instead of wasting time processing the message further.
+For example, if an object has multiple scripts in a prim and you need to use `llMessageLinked` to send a message to one of them, there is simply no way to do that without triggering `link_message` in every single script in the prim. enCLEP, therefore, includes a filter to optionally target a specific script, so if/when a different script receives that message, the enCLEP handler in the other script will drop the event as quickly as possible to reduce script time instead of wasting time processing the message further.
 
 While we use En for most of our projects, there are still some limited circumstances where raw LSL is good enough or provides a slight edge in performance. Generally, En is designed for scaling at the expense of script memory and some limited performance in certain scenarios in simple scripts. It is primarily efficient in a code-factoring sense - that is, by using En functions, En scripts do not unnecessarily duplicate code that could be consolidated into a single function.
 
@@ -242,7 +242,7 @@ Several reasons:
 
 ### Don't the additional function definitions increase script memory?
 
-En dynamically generates event handlers depending on the flags you define in the script. For example, defining `FEATURE_ENRPC_PROTOCOL_CLEP` creates a `listen` event handler, passing CLEP requests to `enrpc_messages()` and any other messages to `en_listen()` if `EVENT_EN_LISTEN` is defined.
+En dynamically generates event handlers depending on the flags you define in the script. For example, defining `FEATURE_ENCLEP_PROTOCOL_CLEP` creates a `listen` event handler, passing CLEP requests to `enCLEP_messages()` and any other messages to `en_listen()` if `EVENT_EN_LISTEN` is defined.
 
 Since LSL does not support dynamic event subscription or multiple event handlers, the only way to accomplish this is to have En generate event handlers itself and pass events to En-defined and user-defined functions depending on which features are enabled.
 

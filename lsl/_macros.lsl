@@ -30,7 +30,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #include "northbridge-sys/en-framework/lsl/libraries/enLNX/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enPrim/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enRotation/macros.lsl"
-#include "northbridge-sys/en-framework/lsl/libraries/enRPC/macros.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries/enCLEP/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enString/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enTest/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enTimer/macros.lsl"

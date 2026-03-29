@@ -24,8 +24,8 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
     #define _HOOK_EN_LINK_MESSAGE
 #endif
 
-// _enRPC_link_message
-#if defined FEATURE_ENRPC_PROTOCOL_LEP || defined FEATURE_ENRPC_PROTOCOL_LEP_INBOUND
+// _enCLEP_link_message
+#if defined FEATURE_ENCLEP_PROTOCOL_LEP || defined FEATURE_ENCLEP_PROTOCOL_LEP_INBOUND
     #define _EVENT_LINK_MESSAGE
     #define _HOOK_ENRPC_LINK_MESSAGE
 #endif
@@ -60,7 +60,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 
 
         #if defined _HOOK_ENRPC_LINK_MESSAGE
-		    if (~_enRPC_link_message(l, i, s, k) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
+		    if (~_enCLEP_link_message(l, i, s, k) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
         #endif
 
 		#if defined _HOOK_EN_LINK_MESSAGE

@@ -30,7 +30,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #include "northbridge-sys/en-framework/lsl/libraries/enLNX/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enPrim/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enRotation/functions.lsl"
-#include "northbridge-sys/en-framework/lsl/libraries/enRPC/functions.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries/enCLEP/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enString/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enTest/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enTimer/functions.lsl"

@@ -1,11 +1,11 @@
 #define EVENT_EN_STATE_ENTRY
 #define EVENT_ENRPC_MESSAGE
 
-//#define FEATURE_ENRPC_PROTOCOL_ROUTING
-#define FEATURE_ENRPC_PROTOCOL_CLEP
-#define FEATURE_ENRPC_PROTOCOL_LEP
-//#define FEATURE_ENRPC_PROTOCOL_SIGNING
-//#define FEATURE_ENRPC_SIGNATURE_VERIFICATION
+//#define FEATURE_ENCLEP_PROTOCOL_ROUTING
+#define FEATURE_ENCLEP_PROTOCOL_CLEP
+#define FEATURE_ENCLEP_PROTOCOL_LEP
+//#define FEATURE_ENCLEP_PROTOCOL_SIGNING
+//#define FEATURE_ENCLEP_SIGNATURE_VERIFICATION
 
 #define OVERRIDE_STRING_ENRPC_LEP_DOMAIN "CLEP Test Domain"
 
@@ -21,14 +21,14 @@ string TESTER_TARGET_SCRIPT = "";
 
 en_state_entry()
 {
-    #if !defined FEATURE_ENRPC_PROTOCOL_SIGNING && !defined FEATURE_ENRPC_SIGNATURE_VERIFICATION
+    #if !defined FEATURE_ENCLEP_PROTOCOL_SIGNING && !defined FEATURE_ENCLEP_SIGNATURE_VERIFICATION
         TESTER_KEY_NAME = ""; // use a blank TESTER_KEY_NAME if signing is disabled, otherwise the messages will be dropped
     #endif
 
-    enRPC_Listen(OVERRIDE_STRING_ENRPC_LEP_DOMAIN, FLAG_ENRPC_LISTEN_OWNERONLY);
+    enCLEP_Listen(OVERRIDE_STRING_ENRPC_LEP_DOMAIN, FLAG_ENRPC_LISTEN_OWNERONLY);
     
     // return id can be stored for reference later if you want
-    string id = enRPC_HybridRequestSigned(
+    string id = enCLEP_HybridRequestSigned(
         TESTER_KEY_NAME, // key_name
         "", // target_region
         "", // target_prim

@@ -16,8 +16,8 @@ You should have received a copy of the GNU Lesser General Public License along
 with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-// if we want to receive SNEP requests, trigger _enRPC_http_request()
-#if defined FEATURE_ENRPC_PROTOCOL_SNEP || defined FEATURE_ENRPC_PROTOCOL_SNEP_REQUEST
+// if we want to receive SNEP requests, trigger _enCLEP_http_request()
+#if defined FEATURE_ENCLEP_PROTOCOL_SNEP || defined FEATURE_ENCLEP_PROTOCOL_SNEP_REQUEST
     #define _EVENT_HTTP_REQUEST
     #define _HOOK_ENRPC_HTTP_REQUEST
 #endif
@@ -63,7 +63,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
         #endif
 
         #if defined _HOOK_ENRPC_HTTP_REQUEST
-		    if (~_enRPC_http_request(request, method, body) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
+		    if (~_enCLEP_http_request(request, method, body) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
         #endif
         
 		#if defined _HOOK_EN_HTTP_REQUEST
