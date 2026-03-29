@@ -39,7 +39,9 @@ function enLNX.Write(scope: string, path: {string}, data: string?, linknum: numb
 end
 
 function enLNX.Read(scope: string, path: {string}, linknum: number?): string?
-    return ll.LinksetDataRead(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))
+    local value = ll.LinksetDataRead(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))
+    if value and value ~= "" then return value end
+    return nil
 end
 
 function enLNX.Reset(scope: string, linknum: number?): (number, number)
