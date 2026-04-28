@@ -1,6 +1,11 @@
 --!strict
 
 -- TODO: if listening to own prim UUID on UUID change (see Prim(?)), change to new channel
+--[[
+TODO: enCLEP relays
+check source.region and see if region has a known routing
+if so, write the routing data via relay encapsulation protocol that adds a hash of each routing step to encapsulation layer for loopback detection and packet return
+]]
 
 local enCLEP = {
     _link = {
@@ -101,7 +106,7 @@ end
 function enCLEP.Init(modules: Dependencies?): ()
     enCLEP._LoadDependencies(modules)
     enCLEP._init = true
-    if enConsole then enConsole.Debug(`enCLEP initialized`) end
+    if enConsole then enConsole.Trace(`enCLEP initialized`) end
 end
 
 function enCLEP._link_message(linknum: number, num: number, message: string, key: string): ()
@@ -164,7 +169,7 @@ function enCLEP.ListenLink(domain: string, handler_function: (clep: Message) -> 
     -- if we haven't already subscribed to link_message events, do so now
     if active_listens == 0 then
         LLEvents:on("link_message", enCLEP._link_message)
-        if enConsole then enConsole.Debug("LEP hooked") end
+        if enConsole then enConsole.Debug("link_message hooked") end
     end
 
     -- setting up a domain handler function
@@ -194,7 +199,7 @@ function enCLEP.ListenChat(domain: string, owner_only: boolean, handler_function
     -- if we haven't already subscribed to listen events, do so now
     if active_listens == 0 then
         LLEvents:on("listen", enCLEP._listen)
-        if enConsole then enConsole.Debug("CLEP hooked") end
+        if enConsole then enConsole.Debug("listen hooked") end
     end
 
     -- create the Listen, set up the domain handler function, and add options
@@ -307,11 +312,10 @@ function enCLEP.Send(
     params: any?,
     id: uuid?,
     result: any?
-): ()
+): uuid
     if enConsole then enConsole.Trace(`enCLEP.Send(..., {target}, {domain}, {method}, {params}, {id}, {result}, ...) ➔ ...`) end
 
     local payload = {
-        timestamp = os.time(),
         source = {
             region = ll.GetRegionName(),
             prim = ll.GetKey(),
@@ -329,28 +333,14 @@ function enCLEP.Send(
 
     -- set output in "transit" encapsulation; first, encode payload to have a static signable message
     local output = {
-        clep = lljson.encode(payload)
+        payload = lljson.encode(payload)
     }
 
     if key then
-        -- add SNEP signature
-        if key:_GetPrivateKey() then
-            output.snep = {
-                sign_algo = "RSA",
-                key_name = key.key_name,
-                hash_algo = "sha256",
-                signature = ll.SignRSA(key:_GetPrivateKey() :: string, output.clep, "sha256")
-            }
-        elseif key:_GetSharedKey() then
-                output.snep = {
-                    sign_algo = "HMAC",
-                    key_name = key.key_name,
-                    hash_algo = "sha512",
-                    signature = ll.HMAC(key:_GetSharedKey() :: string, output.clep, "sha512")
-                }
-        else
-            error(`invalid SNEP key`)
-        end
+        output.snep = enSNEP.Sign(output.payload, key)
+    else
+        -- if we're not using a SNEP signature, add the optional CLEP-level utime value
+        output.utime = os.time()
     end
 
     local channel = enCLEP.CLEPChannel(payload.domain);
@@ -395,12 +385,12 @@ function enCLEP.Send(
             -- use RegionSayTo
             ll.RegionSayTo(ll.GetLinkKey(target.link), channel, lljson.encode(output))
             if enConsole then enConsole.Trace(`... ➔ ll.RegionSayTo({ll.GetLinkKey(target.link)}, {channel}, ...) (forced from link {target.link})`) end
-            return
+            return payload.id
         else
             -- use MessageLinked
             ll.MessageLinked(target.link, 0, lljson.encode(output), NULL_KEY)
             if enConsole then enConsole.Trace(`... ➔ ll.MessageLinked({target.link}, ...)`) end
-            return
+            return payload.id
         end
     end
 
@@ -416,19 +406,19 @@ function enCLEP.Send(
                 -- if you want to not use link messages at all between prims, force chat for other prims in the same linkset (not same prim) using target.force_chat = true
                 ll.MessageLinked(link, 0, lljson.encode(output), NULL_KEY)
                 if enConsole then enConsole.Trace(`... ➔ ll.MessageLinked({link}, ...)`) end
-                return
+                return payload.id
             end
             -- prim is in some other linkset in the region
             -- use RegionSayTo
             ll.RegionSayTo(target.prim, channel, lljson.encode(output))
             if enConsole then enConsole.Trace(`... ➔ ll.RegionSayTo({target.prim}, {channel}, ...)`) end
-            return
+            return payload.id
         end
         -- prim does not exist in this region
         -- use Shout (can cross region border up to 100m)
         ll.Shout(channel, lljson.encode(output))
         if enConsole then enConsole.Trace(`... ➔ ll.Shout({channel}, ...)`) end
-        return
+        return payload.id
     end
 
     -- no target set
@@ -436,13 +426,14 @@ function enCLEP.Send(
     -- use RegionSay
     ll.RegionSay(channel, lljson.encode(output))
     if enConsole then enConsole.Trace(`... ➔ ll.RegionSay({channel}, ...)`) end
-    return
+    return payload.id
 end
 
 function enCLEP.Unmarshal(message: string, source: {prim: uuid, link: number?}): Message?
     local data = lljson.decode(message)
 
-    local data_payload = lljson.decode(data.clep)
+    -- TODO: this presumes SNEP, but we need to accept messages that aren't encapsulated
+    local data_payload = lljson.decode(data.payload)
 
     local id_u = touuid(data_payload.id)
 
@@ -455,7 +446,7 @@ function enCLEP.Unmarshal(message: string, source: {prim: uuid, link: number?}):
         or typeof(data_payload.id) ~= "string"
         or not id_u
      then
-        --enConsole.Trace(`CLEP syntax error: {data.clep}`)
+        --enConsole.Trace(`CLEP syntax error: {data.payload}`)
         return
     end
 
@@ -492,12 +483,14 @@ function enCLEP.Unmarshal(message: string, source: {prim: uuid, link: number?}):
     --[[
     Notes on signature validation:
     This implementation returns metadata.key_name when the signature is valid as checked against a known key.
-    This is the ONLY check it performs. This guarantees the author of the message, but not its originality or source.
+    This guarantees the author of the message, but not its originality or source.
     Prevent replay attacks by doing the following:
         - Check that payload.timestamp is within ~1 second of os.time() - prevents unsophisticated replay attacks, but requires one of the two following mitigations to eliminate all replay attacks:
         - Only accept messages that have a unique id - essentially prevents replay attacks, but also prohibits id reuse, uses memory or datastorage, and requires pruning.
         - Check that metadata.source.prim matches payload.source.prim - eliminates source spoofing, but can't be used with relayed traffic.
     ]]
+
+    -- TODO: move replay validation to enCLEP.Unmarshal, since we need to perform a more complex check for LSL compatibility due to Y2038 problem affecting timestamp field
 
     if data.snep then
         -- we have a signature to validate
