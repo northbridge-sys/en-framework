@@ -14,9 +14,11 @@ enLNX.SCOPE = {
 enLNX._scriptname = ""
 enLNX._primuuid = NULL_KEY
 
-function enLNX._Header(scope: string, linknum: number?): string
+function enLNX._Header(scope: string, linknum: number?, script: string?): string
     if scope == enLNX.SCOPE.SCRIPT then
-        return tostring(ll.GetKey()) .. "\n" .. ll.GetScriptName() .. "\n"
+        local key = ll.GetKey()
+        if linknum then key = ll.GetLinkKey(linknum) end
+        return tostring(key) .. "\n" .. (script or ll.GetScriptName()) .. "\n"
     elseif scope == enLNX.SCOPE.PRIM then
         local key = ll.GetKey()
         if linknum then key = ll.GetLinkKey(linknum) end
@@ -38,8 +40,8 @@ function enLNX.Write(scope: string, path: {string}, data: string?, linknum: numb
     return ll.LinksetDataWrite(enLNX._Header(scope, linknum) .. table.concat(path, "\n"), data or "") ~= 0
 end
 
-function enLNX.Read(scope: string, path: {string}, linknum: number?): string?
-    local value = ll.LinksetDataRead(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))
+function enLNX.Read(scope: string, path: {string}, linknum: number?, script: string?): string?
+    local value = ll.LinksetDataRead(enLNX._Header(scope, linknum, script) .. table.concat(path, "\n"))
     if value and value ~= "" then return value end
     return nil
 end
