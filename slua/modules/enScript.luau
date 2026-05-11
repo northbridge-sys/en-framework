@@ -40,11 +40,7 @@ function enScript.ObjectDie(): ()
 end
 
 function enScript.Memory(): string
-    local used = ll.GetUsedMemory()
-    local max = ll.GetSPMaxMemory()
-    local limit = ll.GetMemoryLimit()
-    local free = ll.GetFreeMemory()
-    return `{used} B used, {max} B max, {limit} B limit, {free} B free, {gcinfo()} B heap`
+    return `{ll.GetUsedMemory()} B used, {ll.GetSPMaxMemory()} B max, {ll.GetMemoryLimit()} B limit, {ll.GetFreeMemory()} B free, gc_info()={gcinfo()}`
 end
 
 return enScript
