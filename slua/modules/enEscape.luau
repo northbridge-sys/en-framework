@@ -8,7 +8,7 @@ function enEscape.Regex(input: string): string
     for i, char in chars do
         -- run llReplaceSubString on each possible character that needs to be escaped
         -- unfortunately Luau's string.gsub() uses some obtuse regex-like escape system that I failed to learn
-        input = ll.ReplaceSubString(input, char, "", 0)
+        input = ll.ReplaceSubString(input, char, "\\" .. char, 0)
     end
     return input
 end
