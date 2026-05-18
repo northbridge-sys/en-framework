@@ -88,23 +88,13 @@ end
 
 -- Dependency management
 
--- enSNEP is always required separately for type checking reasonsy
-local enSNEP = require("@en-framework/enSNEP")
-
 local enConsole: typeof(require("@en-framework/enConsole"))
-
-type Dependencies = {
-    enConsole: typeof(require("@en-framework/enConsole"))?
-}
-
-function enCLEP._LoadDependencies(modules: Dependencies?)
-    if not modules then return end
-    if modules.enConsole then enConsole = modules.enConsole end
-end
+local enSNEP: typeof(require("@en-framework/enSNEP"))
 
 ----
-function enCLEP.Init(modules: Dependencies?): ()
-    enCLEP._LoadDependencies(modules)
+function enCLEP.Init(dependency_enConsole: typeof(enConsole)?, dependency_enSNEP: typeof(enSNEP)?): ()
+    if dependency_enConsole then enConsole = dependency_enConsole end
+    if dependency_enSNEP then enSNEP = dependency_enSNEP end
     enCLEP._init = true
     if enConsole then enConsole.Trace(`enCLEP initialized`) end
 end
