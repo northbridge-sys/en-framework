@@ -44,17 +44,30 @@ function enLNX.PairToPath(pair: string): {string}
     return path
 end
 
-function enLNX.Write(scope: string, path: {string}, data: string?, linknum: number?): boolean
-    return ll.LinksetDataWrite(enLNX._Header(scope, linknum) .. table.concat(path, "\n"), data or "") ~= 0
+function enLNX.Write(scope: string, path: {string}, data: any?, linknum: number?): boolean
+    assert(enLNX._init, `Run enLNX.Init() first`)
+    local value = ""
+    if data ~= nil then value = lljson.slencode(data) end
+    return ll.LinksetDataWrite(enLNX._Header(scope, linknum) .. table.concat(path, "\n"), value) ~= 0
 end
 
-function enLNX.Read(scope: string, path: {string}, linknum: number?, script: string?): string?
+function enLNX.Read(scope: string, path: {string}, linknum: number?, script: string?): any?
+    assert(enLNX._init, `Run enLNX.Init() first`)
     local value = ll.LinksetDataRead(enLNX._Header(scope, linknum, script) .. table.concat(path, "\n"))
-    if value and value ~= "" then return value end
+    if value and value ~= "" then
+        local success, data = pcall(lljson.sldecode, value)
+        if not success then
+            -- not an empty datastore pair, but also not slencoded data
+            enConsole.Warn(`Failed to read LNX data\nScope {scope}, link {linknum}, script "{script}", path ["{table.concat(path, `", "`)}"]: {value}\n{data}`)
+            return nil
+        end
+        return data
+    end
     return nil
 end
 
 function enLNX.Reset(scope: string, linknum: number?): (number, number)
+    assert(enLNX._init, `Run enLNX.Init() first`)
     local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum))}.*$`, "")
     local deleted = tonumber(result[1])
     local denied = tonumber(result[2])
@@ -63,6 +76,7 @@ function enLNX.Reset(scope: string, linknum: number?): (number, number)
 end
 
 function enLNX.Delete(scope: string, path: {string}, linknum: number?): boolean
+    assert(enLNX._init, `Run enLNX.Init() first`)
     if ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}$`, "")[1] == 1 then
         return true
     end
@@ -70,6 +84,7 @@ function enLNX.Delete(scope: string, path: {string}, linknum: number?): boolean
 end
 
 function enLNX.DeleteChildren(scope: string, path: {string}, linknum: number?): (number, number)
+    assert(enLNX._init, `Run enLNX.Init() first`)
     local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}\n[^\n]*$`, "")
     local deleted = tonumber(result[1])
     local denied = tonumber(result[2])
@@ -78,6 +93,7 @@ function enLNX.DeleteChildren(scope: string, path: {string}, linknum: number?): 
 end
 
 function enLNX.DeleteChildrenRecursive(scope: string, path: {string}, linknum: number?): (number, number)
+    assert(enLNX._init, `Run enLNX.Init() first`)
     local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}\n.*$`, "")
     local deleted = tonumber(result[1])
     local denied = tonumber(result[2])
@@ -86,14 +102,17 @@ function enLNX.DeleteChildrenRecursive(scope: string, path: {string}, linknum: n
 end
 
 function enLNX.Find(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {}
+    assert(enLNX._init, `Run enLNX.Init() first`)
     return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}$`, start or 1, count or 0)
 end
 
 function enLNX.FindChildren(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {}
+    assert(enLNX._init, `Run enLNX.Init() first`)
     return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}\n[^\n]*$`, start or 1, count or 0)
 end
 
 function enLNX.FindChildrenRecursive(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {}
+    assert(enLNX._init, `Run enLNX.Init() first`)
     return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}\n.*$`, start or 1, count or 0)
 end
 
@@ -102,10 +121,12 @@ function enLNX.Exists(scope: string, path: {string}, linknum: number?): boolean
 end
 
 function enLNX.FindRegex(scope: string, regex: string, start: number?, count: number?, linknum: number?): {}
+    assert(enLNX._init, `Run enLNX.Init() first`)
     return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope, linknum))}{regex}$`, start or 1, count or 0)
 end
 
 function enLNX.DeleteRegex(scope: string, regex: string, linknum: number?): (number, number)
+    assert(enLNX._init, `Run enLNX.Init() first`)
     local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum))}{regex}$`, "")
     local deleted = tonumber(result[1])
     local denied = tonumber(result[2])
@@ -114,6 +135,7 @@ function enLNX.DeleteRegex(scope: string, regex: string, linknum: number?): (num
 end
 
 function enLNX._Purge(): ()
+    assert(enLNX._init, `Run enLNX.Init() first`)
     local root = ll.GetLinkKey(0) -- use link 0 when single prim
     if ll.GetNumberOfPrims() > 1 then
         root = ll.GetLinkKey(1) -- use link 1 when multi prim
@@ -166,6 +188,7 @@ function enLNX._Purge(): ()
 end
 
 function enLNX._MigratePrim(old_prim_uuid: uuid): ()
+    assert(enLNX._init, `Run enLNX.Init() first`)
     if not old_prim_uuid or old_prim_uuid == uuid(NULL_KEY) or old_prim_uuid == ll.GetKey() then return end
     enConsole.Debug(`Migrating LNX datastore for prim {old_prim_uuid} to prim {ll.GetKey()}`)
     local keys = ll.LinksetDataFindKeys(`^{enEscape.Regex(tostring(old_prim_uuid))}\n.*\n.*$`, 1, 1)
@@ -185,6 +208,7 @@ function enLNX._MigratePrim(old_prim_uuid: uuid): ()
 end
 
 function enLNX._MigrateScript(old_script_name: string): ()
+    assert(enLNX._init, `Run enLNX.Init() first`)
     if old_script_name == "" then return end
     enConsole.Debug(`Migrating LNX datastore for script "{old_script_name}"`)
     local keys = ll.LinksetDataFindKeys(`^{ll.GetKey()}\n{enEscape.Regex(old_script_name)}\n.*$`, 1, 1)
