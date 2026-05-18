@@ -1,9 +1,11 @@
 --!strict
 
-local enConsole = require("enConsole")
-local enEscape = require("enEscape")
+local enConsole: typeof(require("enConsole"))
+local enEscape: typeof(require("enEscape"))
 
-local enLNX = {}
+local enLNX = {
+    _init = false
+}
 
 -- "constants"
 enLNX.SCOPE = {
@@ -13,6 +15,12 @@ enLNX.SCOPE = {
 }
 enLNX._scriptname = ""
 enLNX._primuuid = NULL_KEY
+
+function enLNX.Init(dependency_enConsole: typeof(require("enConsole")), dependency_enEscape: typeof(require("enEscape"))): ()
+    enConsole = dependency_enConsole
+    enEscape = dependency_enEscape
+    enLNX._init = true
+end
 
 function enLNX._Header(scope: string, linknum: number?, script: string?): string
     if scope == enLNX.SCOPE.SCRIPT then
