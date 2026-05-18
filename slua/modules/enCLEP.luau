@@ -57,7 +57,8 @@ function enCLEP.NewMessage(
     metadata: {
         source: {
             link: number?,
-            prim: uuid
+            prim: uuid,
+            script: string?
         },
         key_name: string?,
         hash_algo: string?
