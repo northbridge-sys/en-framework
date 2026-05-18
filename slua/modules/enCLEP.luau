@@ -26,7 +26,8 @@ type MessageType = {
     metadata: {
         source: {
             link: number?,
-            prim: uuid
+            prim: uuid,
+            script: string? -- this is currently only defined if using enCLEP._loopback; if an enhanced messaging function ever appears that can guarantee a source script name, it may be used
         },
         key_name: string?,
         hash_algo: string?
