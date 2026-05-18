@@ -63,7 +63,7 @@ function enCLEP.NewMessage(
         hash_algo: string?
     },
     payload: {
-        timestamp: number,
+        utime: number,
         source: {
             region: string,
             prim: uuid,
@@ -427,7 +427,7 @@ function enCLEP.Unmarshal(message: string, source: {prim: uuid, link: number?}):
 
     local id_u = touuid(data_payload.id)
 
-    if     typeof(data_payload.timestamp) ~= "number"
+    if     typeof(data_payload.utime) ~= "number"
         or typeof(data_payload.source.region) ~= "string"
         or typeof(data_payload.source.prim) ~= "string"
         or typeof(data_payload.source.script) ~= "string"
@@ -441,7 +441,7 @@ function enCLEP.Unmarshal(message: string, source: {prim: uuid, link: number?}):
     end
 
     local payload = {
-        timestamp = data_payload.timestamp,
+        utime = data_payload.utime,
         source = data_payload.source,
         target = data_payload.target,
         domain = data_payload.domain,
@@ -475,12 +475,12 @@ function enCLEP.Unmarshal(message: string, source: {prim: uuid, link: number?}):
     This implementation returns metadata.key_name when the signature is valid as checked against a known key.
     This guarantees the author of the message, but not its originality or source.
     Prevent replay attacks by doing the following:
-        - Check that payload.timestamp is within ~1 second of os.time() - prevents unsophisticated replay attacks, but requires one of the two following mitigations to eliminate all replay attacks:
+        - Check that payload.utime is within ~1 second of os.time() - prevents unsophisticated replay attacks, but requires one of the two following mitigations to eliminate all replay attacks:
         - Only accept messages that have a unique id - essentially prevents replay attacks, but also prohibits id reuse, uses memory or datastorage, and requires pruning.
         - Check that metadata.source.prim matches payload.source.prim - eliminates source spoofing, but can't be used with relayed traffic.
     ]]
 
-    -- TODO: move replay validation to enCLEP.Unmarshal, since we need to perform a more complex check for LSL compatibility due to Y2038 problem affecting timestamp field
+    -- TODO: move replay validation to enCLEP.Unmarshal, since we need to perform a more complex check for LSL compatibility due to Y2038 problem affecting utime field
 
     if data.snep then
         -- we have a signature to validate
