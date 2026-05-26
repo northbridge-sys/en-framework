@@ -14,7 +14,6 @@ local enCLEP = {
     _chat = {
         listens = {}
     },
-    _keys = {},
     _init = false,
     _initstring = "Call enCLEP.Init(...) first"
 }
@@ -30,7 +29,8 @@ type MessageType = {
             script: string? -- if an enhanced messaging function ever appears that can guarantee a source script name, it may be used
         },
         key_name: string?,
-        hash_algo: string?
+        hash_algo: string?,
+        sign_algo: "RSA" | "HMAC"?
     },
     payload: {
         utime: number,
@@ -62,7 +62,8 @@ function enCLEP.NewMessage(
             script: string?
         },
         key_name: string?,
-        hash_algo: string?
+        hash_algo: string?,
+        sign_algo: "RSA" | "HMAC"?
     },
     payload: {
         utime: number,
@@ -284,12 +285,6 @@ function enCLEP.ListenRemoveChatAll(): ()
     end
 end
 
-function enCLEP.EnrollSNEPKey(key: enSNEP.Key): ()
-    if not enCLEP._init then error(enCLEP._initstring) end
-    enCLEP._keys[key:GetName()] = key
-    if enConsole then enConsole.Trace(`Enrolled SNEP key {key:GetName()}`) end
-end
-
 function enCLEP.Send(
     key: enSNEP.Key?,
     target: {
@@ -434,7 +429,6 @@ function enCLEP.Unmarshal(message: string, source: {prim: uuid, link: number?}):
     local success, data = pcall(lljson.decode, message)
     if not success then error(`Not valid CLEP message`) end -- not a valid CLEP message
 
-    -- TODO: this presumes SNEP, but we need to accept messages that aren't encapsulated
     local data_payload = lljson.decode(data.payload)
 
     local id_u = touuid(data_payload.id)
@@ -480,57 +474,14 @@ function enCLEP.Unmarshal(message: string, source: {prim: uuid, link: number?}):
 
     local metadata = {source = source}
 
-    --[[
-    Notes on signature validation:
-    This implementation returns metadata.key_name when the signature is valid as checked against a known key.
-    This guarantees the author of the message, but not its originality or source.
-    Prevent replay attacks by doing the following:
-        - Check that payload.utime is within ~1 second of os.time() - prevents unsophisticated replay attacks, but requires one of the two following mitigations to eliminate all replay attacks:
-        - Only accept messages that have a unique id - essentially prevents replay attacks, but also prohibits id reuse, uses memory or datastorage, and requires pruning.
-        - Check that metadata.source.prim matches payload.source.prim - eliminates source spoofing, but can't be used with relayed traffic.
-    ]]
-
-    -- TODO: move replay validation to enCLEP.Unmarshal, since we need to perform a more complex check for LSL compatibility due to Y2038 problem affecting utime field
-
-    if data.snep then
+    if data.snep and enSNEP then
         -- we have a signature to validate
-        if not enCLEP._keys[data.snep.key_name] then
-            error(`Unknown signature key_name: {data.snep.key_name}`)
-        elseif data.snep.sign_algo == "RSA" then
-            if not enCLEP._keys[data.snep.key_name]:_GetPublicKey() then
-                error(`Failed to get public key for {data.snep.key_name}`)
-            elseif not ll.VerifyRSA(enCLEP._keys[data.snep.key_name]:_GetPublicKey() :: string, data.clep, data.snep.signature, data.snep.hash_algo) then
-                error(`Failed to verify RSA signature for {data.snep.key_name}`)
-            else
-                -- valid signature
-                metadata.key_name = data.snep.key_name
-                metadata.hash_algo = data.snep.hash_algo
-            end
-        elseif data.snep.sign_algo == "HMAC" then
-            if not enCLEP._keys[data.snep.key_name]:_GetSharedKey() then
-                error(`Failed to get shared key for {data.snep.key_name}`)
-            elseif not ll.HMAC(enCLEP._keys[data.snep.key_name]:_GetSharedKey() :: string, data.clep, data.snep.hash_algo) then
-                error(`Failed to verify HMAC signature for {data.snep.key_name}`)
-            else
-                -- valid signature
-                metadata.key_name = data.snep.key_name
-                metadata.hash_algo = data.snep.hash_algo
-            end
-        else
-            error(`Unknown signature.sign_algo: {data.snep.sign_algo}`)
+        local verification = enSNEP.Verify(data.payload, data.snep, payload.utime, 1) -- TODO: allow modification of stale_seconds
+        if verification then -- signature verified successfully
+            metadata.key_name = verification.key_name
+            metadata.hash_algo = verification.hash_algo
+            metadata.sign_algo = verification.sign_algo
         end
-    end
-
-    if typeof(payload.domain) ~= "string" then
-        error(`CLEP payload.domain is {typeof(payload.domain)}: {payload.domain}`)
-    end
-
-    if metadata.hash_algo and typeof(metadata.hash_algo) ~= "string" then
-        error(`CLEP metadata.hash_algo is {typeof(metadata.hash_algo)}: {metadata.hash_algo}`)
-    end
-
-    if metadata.hash_algo and typeof(metadata.hash_algo) ~= "string" then
-        error(`CLEP metadata.hash_algo is {typeof(metadata.hash_algo)}: {metadata.hash_algo}`)
     end
 
     return enCLEP.NewMessage(metadata, payload)
