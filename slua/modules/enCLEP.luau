@@ -306,11 +306,11 @@ function enCLEP.Send(
     id: uuid?,
     result: any?
 ): uuid
-    if enConsole then enConsole.Trace(`enCLEP.Send(..., {target}, {domain}, {method}, {params}, {id}, {result}, ...) ➔ ...`) end
-
     if target.prim == NULL_KEY then
         target.prim = nil -- do not allow passing NULL_KEY as target_prim, because it will not be accepted by anyone
     end
+
+    local func_trace = `enCLEP.Send(domain = "{domain}", method = \{ "{table.concat(method, `", "`)}" \}, id = {tostring(id)}, target = \{ region = "{target.region}", prim = {target.prim}, root = {target.root}, link = {target.link}, script = "{target.script}" \}, params: {typeof(params)}, result: {typeof(result)}...) ➔ `
 
     local payload = {
         source = {
@@ -374,7 +374,7 @@ function enCLEP.Send(
         or (target.prim and target.prim == ll.GetKey())
     ) then
         enCLEP._link_message(ll.GetLinkNumber(), 0, lljson.encode(output), NULL_KEY) -- pass it back in as if it were received as a link_message
-        if enConsole then enConsole.Trace(`... ➔ enCLEP._link_message(...) (loopback)`) end
+        if enConsole then enConsole.Trace(`{func_trace} ➔ enCLEP._link_message(...) (loopback)`) end
         return payload.id
     end
 
@@ -384,12 +384,12 @@ function enCLEP.Send(
         if target.force_chat then
             -- use RegionSayTo
             ll.RegionSayTo(ll.GetLinkKey(target.link), channel, lljson.encode(output))
-            if enConsole then enConsole.Trace(`... ➔ ll.RegionSayTo({ll.GetLinkKey(target.link)}, {channel}, ...) (forced from link {target.link})`) end
+            if enConsole then enConsole.Trace(`{func_trace} ➔ ll.RegionSayTo({ll.GetLinkKey(target.link)}, {channel}, ...) (forced from link {target.link})`) end
             return payload.id
         else
             -- use MessageLinked
             ll.MessageLinked(target.link, 0, lljson.encode(output), NULL_KEY)
-            if enConsole then enConsole.Trace(`... ➔ ll.MessageLinked({target.link}, ...)`) end
+            if enConsole then enConsole.Trace(`{func_trace} ➔ ll.MessageLinked({target.link}, ...)`) end
             return payload.id
         end
     end
@@ -405,19 +405,19 @@ function enCLEP.Send(
                 -- use MessageLinked instead of RegionSayTo, since it's faster and RST fails on same-prim messages
                 -- if you want to not use link messages at all between prims, force chat for other prims in the same linkset (not same prim) using target.force_chat = true
                 ll.MessageLinked(link, 0, lljson.encode(output), NULL_KEY)
-                if enConsole then enConsole.Trace(`... ➔ ll.MessageLinked({link}, ...)`) end
+                if enConsole then enConsole.Trace(`{func_trace} ➔ ll.MessageLinked({link}, ...)`) end
                 return payload.id
             end
             -- prim is in some other linkset in the region
             -- use RegionSayTo
             ll.RegionSayTo(target.prim, channel, lljson.encode(output))
-            if enConsole then enConsole.Trace(`... ➔ ll.RegionSayTo({target.prim}, {channel}, ...)`) end
+            if enConsole then enConsole.Trace(`{func_trace} ➔ ll.RegionSayTo({target.prim}, {channel}, ...)`) end
             return payload.id
         end
         -- prim does not exist in this region
         -- use Shout (can cross region border up to 100m)
         ll.Shout(channel, lljson.encode(output))
-        if enConsole then enConsole.Trace(`... ➔ ll.Shout({channel}, ...)`) end
+        if enConsole then enConsole.Trace(`{func_trace} ➔ ll.Shout({channel}, ...)`) end
         return payload.id
     end
 
@@ -425,7 +425,7 @@ function enCLEP.Send(
     -- broadcast to all prims in the region
     -- use RegionSay
     ll.RegionSay(channel, lljson.encode(output))
-    if enConsole then enConsole.Trace(`... ➔ ll.RegionSay({channel}, ...)`) end
+    if enConsole then enConsole.Trace(`{func_trace} ➔ ll.RegionSay({channel}, ...)`) end
     return payload.id
 end
 
