@@ -6,14 +6,14 @@ local enPretty = {}
 -- @param avatar_uuid avatar UUID
 -- @return avatar_uuid, quoted with a parenthetical rich link to their profile
 function enPretty.Avatar(avatar_uuid: uuid): string
-    return `"{avatar_uuid}" (secondlife:///app/agent/{avatar_uuid}/username)`
+    return `secondlife:///app/agent/{avatar_uuid}/username ({avatar_uuid})`
 end
 
 --- Group UUID prettifier.
 -- @param group_uuid group UUID
 -- @return group_uuid, quoted with a parenthetical rich link to its about page
 function enPretty.Group(group_uuid: uuid): string
-    return `"{group_uuid}" (secondlife:///app/group/{group_uuid}/about)`
+    return `secondlife:///app/group/{group_uuid}/about ({group_uuid})`
 end
 
 --- Prim UUID prettifier.
@@ -21,12 +21,11 @@ end
 -- @return prim_uuid, quoted with a parenthetical name and position, if it is in the same region
 function enPretty.Prim(prim_uuid: uuid): string
     local details = ll.GetObjectDetails(prim_uuid, {OBJECT_NAME, OBJECT_POS})
-    local vec = tovector(details[1])
+    local vec = tovector(details[2])
     if #details == 0 or not vec then
-        return `"{prim_uuid}" (not in region)`
+        return `prim not in region ({prim_uuid})`
     end
-    local pos = enPretty.Vector(vec, 3)
-    return `"{prim_uuid}" ("{details[1]}" at {pos})`
+    return `"{details[1]}" at {enPretty.Vector(vec, 3)} ({prim_uuid})`
 end
 
 --- Vector prettifier.
