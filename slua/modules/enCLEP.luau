@@ -476,7 +476,7 @@ function enCLEP.Unmarshal(message: string, source: {prim: uuid, link: number?}):
 
     if data.snep and enSNEP then
         -- we have a signature to validate
-        local verification = enSNEP.Verify(data.payload, data.snep, payload.utime, 1) -- TODO: allow modification of stale_seconds
+        local verification = enSNEP.Verify(data.payload, data.snep, payload.utime, 10) -- TODO: allow modification of stale_seconds
         if verification then -- signature verified successfully
             metadata.key_name = verification.key_name
             metadata.hash_algo = verification.hash_algo
