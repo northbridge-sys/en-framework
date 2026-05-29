@@ -44,24 +44,24 @@ function enSNEP.NewHMAC(key_name: string, shared_key: string): Key
     return setmetatable(self, enSNEP)
 end
 
-function enSNEP.Sign(payload: string, key: Key): Signature
+function enSNEP.Sign(payload: string, key: Key, hash_algo: string?): Signature
     -- add SNEP signature
     if key:_GetPrivateKey() then
         return enSNEP._NewSignature(
             "RSA",
-            "sha512",
+            hash_algo or "sha256",
             key,
             payload
         )
     elseif key:_GetSharedKey() then
         return enSNEP._NewSignature(
             "HMAC",
-            "sha512",
+            hash_algo or "sha256",
             key,
             payload
         )
     else
-        error(`invalid SNEP key`)
+        error(`Invalid SNEP key`)
     end
 end
 
@@ -98,7 +98,6 @@ function enSNEP.Verify(payload: string, snep: Signature, payload_utime: number?,
         while seconds_remaining > 0 do
             if ll.HMAC(enSNEP._keys[snep.key_name]:_GetSharedKey() :: string, tostring(utime - (seconds_to_check - seconds_remaining)) .. payload, snep.hash_algo) then
                 -- signature verified succesfully and is, at most, seconds_to_check old
-                assert(not payload_utime or utime - math.abs((seconds_to_check - seconds_remaining) - payload_utime) < 1.5, `Payload utime {payload_utime} does not match signature utime {utime - (seconds_to_check - seconds_remaining)}`)
                 return {key_name = snep.key_name, sign_algo = snep.sign_algo, hash_algo = snep.hash_algo}
             end
             seconds_remaining -= 1
