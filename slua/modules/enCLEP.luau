@@ -141,8 +141,10 @@ function enCLEP._listen(channel: number, name: string, key: uuid, message: strin
     enCLEP._chat.listens[clep.payload.domain].handler(clep)
 end
 
-function enCLEP.CLEPChannel(domain: string): number
-    return bit32.bor(ll.Hash(domain), 0x80000000)
+function enCLEP.Channel(domain: string): number
+    local channel = bit32.bor(ll.Hash(domain), 0x80000000)
+    if channel >= 2^31 then channel -= 2^32 end -- avoid overflowing - bit32 numbers are returned as unsigned, but channels can only be signed 32-bit
+    return channel
 end
 
 function enCLEP.ListenLink(domain: string, handler_function: (clep: Message) -> ()): ()
@@ -198,12 +200,12 @@ function enCLEP.ListenChat(domain: string, owner_only: boolean, handler_function
 
     -- create the Listen, set up the domain handler function, and add options
     enCLEP._chat.listens[domain] = {
-        handle = ll.Listen(enCLEP.CLEPChannel(domain), "", NULL_KEY, ""),
+        handle = ll.Listen(enCLEP.Channel(domain), "", NULL_KEY, ""),
         handler = handler_function,
         owner_only = owner_only
     }
 
-    if enConsole then enConsole.Trace(`enCLEP.ListenChat("{domain}" ({enCLEP.CLEPChannel(domain)}), {owner_only}, ...) ➔ {enCLEP._chat.listens[domain].handle}`) end
+    if enConsole then enConsole.Trace(`enCLEP.ListenChat("{domain}" ({enCLEP.Channel(domain)}), {owner_only}, ...) ➔ {enCLEP._chat.listens[domain].handle}`) end
 
     return
 end
@@ -336,7 +338,7 @@ function enCLEP.Send(
         output.utime = os.time()
     end
 
-    local channel = enCLEP.CLEPChannel(payload.domain);
+    local channel = enCLEP.Channel(payload.domain);
 
     --[[
     Possible target configurations:
