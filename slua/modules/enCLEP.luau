@@ -7,15 +7,20 @@ check source.region and see if region has a known routing
 if so, write the routing data via relay encapsulation protocol that adds a hash of each routing step to encapsulation layer for loopback detection and packet return
 ]]
 
+local enConsole: typeof(require("@en-framework/enConsole"))
+local enListen: typeof(require("@en-framework/enListen"))
+local enSNEP: typeof(require("@en-framework/enSNEP"))
+
 local enCLEP = {
     _link = {
-        listens = {}
+        handlers = {}
     },
     _chat = {
-        listens = {}
+        handlers = {}
     },
-    _init = false,
-    _initstring = "Call enCLEP.Init(...) first"
+    _verbose = false,
+    _initstring = "Call enCLEP.Init(...) first",
+    _init = false
 }
 enCLEP.__index = enCLEP
 
@@ -89,17 +94,17 @@ function enCLEP.NewMessage(
     return setmetatable(self, enCLEP)
 end
 
--- Dependency management
-
-local enConsole: typeof(require("@en-framework/enConsole"))
-local enSNEP: typeof(require("@en-framework/enSNEP"))
-
-----
-function enCLEP.Init(dependency_enConsole: typeof(enConsole)?, dependency_enSNEP: typeof(enSNEP)?): ()
-    if dependency_enConsole then enConsole = dependency_enConsole end
+function enCLEP.Init(
+    dependency_enConsole: typeof(enConsole),
+    dependency_enListen: typeof(enListen),
+    verbose_logging: boolean?,
+    dependency_enSNEP: typeof(enSNEP)?): ()
+    enConsole = dependency_enConsole
+    enListen = dependency_enListen
     if dependency_enSNEP then enSNEP = dependency_enSNEP end
+    enCLEP._verbose = verbose_logging or false
     enCLEP._init = true
-    if enConsole then enConsole.Trace(`enCLEP initialized`) end
+    enConsole.Trace(`enCLEP initialized`)
 end
 
 function enCLEP._link_message(linknum: number, num: number, message: string, key: string): ()
@@ -108,182 +113,100 @@ function enCLEP._link_message(linknum: number, num: number, message: string, key
 
     local success, clep = pcall(enCLEP.Unmarshal, message, {prim = ll.GetLinkKey(linknum), link = linknum})
     if not success then
-        if enConsole then enConsole.Trace(`Dropped CLEP message from link {linknum}: {clep}\n{message}`) end
+        if enCLEP._verbose then enConsole.Trace(`Dropped CLEP message from link {linknum}: {clep}\n{message}`) end
         return
     end
 
     if not clep then return end -- silently dropped message
 
-    if not enCLEP._link.listens[clep.payload.domain] then return end -- not listening to this domain
+    if not enCLEP._link.handlers[clep.payload.domain] then return end -- not listening to this domain
 
-    enCLEP._link.listens[clep.payload.domain].handler(clep)
+    local handler = enCLEP._link.handlers[clep.payload.domain]
+    handler(clep)
 end
 
-function enCLEP._listen(channel: number, name: string, key: uuid, message: string): ()
-
+function enCLEP._listen(domain: string | number, name: string, key: uuid, message: string): ()
+    
     --enConsole.Trace(`enCLEP._listen({channel}, "{name}", "{key}", "{message}") ➔ ...`)
 
     local success, clep = pcall(enCLEP.Unmarshal, message, {prim = key})
     if not success then
-        if enConsole then enConsole.Trace(`Dropped CLEP message from {key}: {clep}\n{message}`) end
+        if enCLEP._verbose then enConsole.Trace(`Dropped CLEP message from {key}: {clep}\n{message}`) end
         return
     end
 
     if not clep then return end -- silently dropped message
 
-    if not enCLEP._chat.listens[clep.payload.domain] then return end -- not listening to this domain
+    if not enCLEP._chat.handlers[clep.payload.domain] then return end -- not listening to this domain
 
-    if enCLEP._chat.listens[clep.payload.domain].owner_only and ll.GetOwnerKey(key) ~= ll.GetOwner() then
-        if enConsole then enConsole.Trace(`Dropped non-owner CLEP message from {key}`) end
-        return
-    end
-
-    enCLEP._chat.listens[clep.payload.domain].handler(clep)
-end
-
-function enCLEP.Channel(domain: string): number
-    local channel = bit32.bor(ll.Hash(domain), 0x80000000)
-    if channel >= 2^31 then channel -= 2^32 end -- avoid overflowing - bit32 numbers are returned as unsigned, but channels can only be signed 32-bit
-    return channel
+    local handler = enCLEP._chat.handlers[clep.payload.domain]
+    handler(clep)
 end
 
 function enCLEP.ListenLink(domain: string, handler_function: (clep: Message) -> ()): ()
     if not enCLEP._init then error(enCLEP._initstring) end
-    if enConsole then enConsole.Trace(`enCLEP.ListenLink("{domain}", ...)`) end
+    enConsole.Trace(`enCLEP.ListenLink("{domain}", ...)`)
 
-    if enCLEP._link.listens[domain] then
+    if enCLEP._link.handlers[domain] then
         -- update existing handler
-        enCLEP._link.listens[domain].handler = handler_function
+        enCLEP._link.handlers[domain] = handler_function
         return
     end
 
-    local active_listens = 0
-    for _ in pairs(enCLEP._link.listens) do
-        active_listens = active_listens + 1
-    end
-
-    -- if we haven't already subscribed to link_message events, do so now
-    if active_listens == 0 then
-        LLEvents:on("link_message", enCLEP._link_message)
-        if enConsole then enConsole.Debug("link_message hooked") end
-    end
-
-    -- setting up a domain handler function
-    enCLEP._link.listens[domain] = {
-        handler = handler_function
-    }
+    LLEvents:on("link_message", enCLEP._link_message)
+    enCLEP._link.handlers[domain] = handler_function
 end
 
-function enCLEP.ListenChat(domain: string, owner_only: boolean, handler_function: (clep: Message) -> ()): ()
+function enCLEP.ListenChat(domain: string, owner_only: boolean, handler_function: (clep: Message) -> (), source_uuid: uuid?): ()
     if not enCLEP._init then error(enCLEP._initstring) end
-    -- TODO: what about passing nil to handler_function? that causes this to fail since it creates a Listen but points nowhere
 
-    if enCLEP._chat.listens[domain] then
-        -- updating existing handler
-        enCLEP._chat.listens[domain].handler = handler_function
-        return
-    end
+    enListen.Open(enCLEP._listen, owner_only, domain, nil, source_uuid, nil, "table")
+    enCLEP._chat.handlers[domain] = handler_function
 
-    local active_listens = 0
-    for _ in pairs(enCLEP._chat.listens) do
-        active_listens = active_listens + 1
-    end
-
-    -- we will be adding a new listen, can we afford it?
-    assert(active_listens < 64, "too many listens")
-
-    -- if we haven't already subscribed to listen events, do so now
-    if active_listens == 0 then
-        LLEvents:on("listen", enCLEP._listen)
-        if enConsole then enConsole.Debug("listen hooked") end
-    end
-
-    -- create the Listen, set up the domain handler function, and add options
-    enCLEP._chat.listens[domain] = {
-        handle = ll.Listen(enCLEP.Channel(domain), "", NULL_KEY, ""),
-        handler = handler_function,
-        owner_only = owner_only
-    }
-
-    if enConsole then enConsole.Trace(`enCLEP.ListenChat("{domain}" ({enCLEP.Channel(domain)}), {owner_only}, ...) ➔ {enCLEP._chat.listens[domain].handle}`) end
-
-    return
+    enConsole.Trace(`enCLEP.ListenChat("{domain}" ({enListen.ToChannel(domain)}), {owner_only}, ...) ➔ {enCLEP._chat.handlers[domain]}`)
 end
 
 function enCLEP.ListenRemoveLink(domain: string): ()
-    if domain then assert(enCLEP._link.listens[domain], `LEP domain not found: {domain}`) end
+    if not enCLEP._init then error(enCLEP._initstring) end
+    assert(enCLEP._link.handlers[domain], `Domain not found: {domain}`)
 
-    if enConsole then enConsole.Trace(`enCLEP.ListenRemoveLink("{domain}")`) end
+    enConsole.Trace(`enCLEP.ListenRemoveLink("{domain}")`)
 
-    enCLEP._link.listens[domain] = nil
+    enCLEP._link.handlers[domain] = nil
 
-    local active_listens = 0
-    for _ in pairs(enCLEP._link.listens) do
-        active_listens = active_listens + 1
-    end
-
-    -- we are no longer listening to any domains, unsubscribe from link_message event to avoid double subscribing if LEP.Listen is called again from no listens
-    if active_listens == 0 then
+    -- we are no longer listening to any domains, unsubscribe from link_message event
+    if next(enCLEP._link.handlers) == nil then
         LLEvents:off("link_message", enCLEP._link_message)
-        if enConsole then enConsole.Debug("link_message unhooked") end
     end
-
-    return
 end
 
 function enCLEP.ListenRemoveChat(domain: string): ()
-    assert(enCLEP._chat.listens[domain], `CLEP domain not found: {domain}`)
+    if not enCLEP._init then error(enCLEP._initstring) end
+    assert(enCLEP._chat.handlers[domain], `Domain not found: {domain}`)
 
-    if enCLEP._chat.listens[domain].handle and enCLEP._chat.listens[domain].handle ~= 0 then ll.ListenRemove(enCLEP._chat.listens[domain].handle) end
+    enConsole.Trace(`enCLEP.ListenRemoveChat("{domain}")`)
 
-    if enConsole then enConsole.Trace(`enCLEP.ListenRemoveChat("{domain}")`) end
+    enListen.Close(domain)
 
-    enCLEP._chat.listens[domain] = nil
-
-    local active_listens = 0
-    for _ in pairs(enCLEP._chat.listens) do
-        active_listens = active_listens + 1
-    end
-
-    -- we are no longer listening to any domains, unsubscribe from listen event to avoid double subscribing if CLEP.Listen is called again from no listens
-    if active_listens == 0 then
-        LLEvents:off("listen", enCLEP._listen)
-        if enConsole then enConsole.Debug("listen unhooked") end
-    end
-
-    return
+    enCLEP._chat.handlers[domain] = nil
 end
 
 function enCLEP.ListenRemoveLinkAll(): ()
-    local active_listens = 0
-    for _ in pairs(enCLEP._link.listens) do
-        active_listens = active_listens + 1
-    end
-
-    if active_listens == 0 then return end
+    if next(enCLEP._link.handlers) then return end
 
     LLEvents:off("link_message", enCLEP._link_message)
-    if enConsole then enConsole.Debug("link_message unhooked") end
 
-    for domain, data in pairs(enCLEP._link.listens) do
-        enCLEP._link.listens[domain] = nil
+    for domain in pairs(enCLEP._link.handlers) do
+        enCLEP._link.handlers[domain] = nil
     end
 end
 
 function enCLEP.ListenRemoveChatAll(): ()
-    local active_listens = 0
-    for _ in pairs(enCLEP._chat.listens) do
-        active_listens = active_listens + 1
-    end
+    if next(enCLEP._chat.handlers) then return end
 
-    if active_listens == 0 then return end
-
-    LLEvents:off("listen", enCLEP._listen)
-    if enConsole then enConsole.Debug("listen unhooked") end
-
-    for domain, data in pairs(enCLEP._chat.listens) do
-        if data.handle and data.handle ~= 0 then ll.ListenRemove(data.handle) end
-        enCLEP._chat.listens[domain] = nil
+    for domain in pairs(enCLEP._chat.handlers) do
+        enListen.Close(domain)
+        enCLEP._chat.handlers[domain] = nil
     end
 end
 
@@ -303,7 +226,7 @@ function enCLEP.Send(
     id: uuid?,
     result: any?
 ): uuid
-    if target.prim == NULL_KEY then
+    if tostring(target.prim) == NULL_KEY then
         target.prim = nil -- do not allow passing NULL_KEY as target_prim, because it will not be accepted by anyone
     end
 
@@ -338,7 +261,7 @@ function enCLEP.Send(
         output.utime = os.time()
     end
 
-    local channel = enCLEP.Channel(payload.domain);
+    local channel = enListen.ToChannel(payload.domain);
 
     --[[
     Possible target configurations:
@@ -371,7 +294,7 @@ function enCLEP.Send(
         or (target.prim and target.prim == ll.GetKey())
     ) then
         enCLEP._link_message(ll.GetLinkNumber(), 0, lljson.encode(output), NULL_KEY) -- pass it back in as if it were received as a link_message
-        if enConsole then enConsole.Trace(`{func_trace} ➔ enCLEP._link_message(...) (loopback)`) end
+        if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ enCLEP._link_message(...) (loopback)`) end
         return payload.id
     end
 
@@ -381,12 +304,12 @@ function enCLEP.Send(
         if target.force_chat then
             -- use RegionSayTo
             ll.RegionSayTo(ll.GetLinkKey(target.link), channel, lljson.encode(output))
-            if enConsole then enConsole.Trace(`{func_trace} ➔ ll.RegionSayTo({ll.GetLinkKey(target.link)}, {channel}, ...) (forced from link {target.link})`) end
+            if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ ll.RegionSayTo({ll.GetLinkKey(target.link)}, {channel}, ...) (forced from link {target.link})`) end
             return payload.id
         else
             -- use MessageLinked
-            ll.MessageLinked(target.link, 0, lljson.encode(output), NULL_KEY)
-            if enConsole then enConsole.Trace(`{func_trace} ➔ ll.MessageLinked({target.link}, ...)`) end
+            ll.MessageLinked(target.link, 0, lljson.encode(output), uuid(NULL_KEY) :: uuid)
+            if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ ll.MessageLinked({target.link}, ...)`) end
             return payload.id
         end
     end
@@ -401,20 +324,20 @@ function enCLEP.Send(
                 -- the UUID of the linknum within our OWN linkset matches the targeted prim's UUID, so it is part of our linkset
                 -- use MessageLinked instead of RegionSayTo, since it's faster and RST fails on same-prim messages
                 -- if you want to not use link messages at all between prims, force chat for other prims in the same linkset (not same prim) using target.force_chat = true
-                ll.MessageLinked(link, 0, lljson.encode(output), NULL_KEY)
-                if enConsole then enConsole.Trace(`{func_trace} ➔ ll.MessageLinked({link}, ...)`) end
+                ll.MessageLinked(link, 0, lljson.encode(output), uuid(NULL_KEY) :: uuid)
+                if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ ll.MessageLinked({link}, ...)`) end
                 return payload.id
             end
             -- prim is in some other linkset in the region
             -- use RegionSayTo
             ll.RegionSayTo(target.prim, channel, lljson.encode(output))
-            if enConsole then enConsole.Trace(`{func_trace} ➔ ll.RegionSayTo({target.prim}, {channel}, ...)`) end
+            if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ ll.RegionSayTo({target.prim}, {channel}, ...)`) end
             return payload.id
         end
         -- prim does not exist in this region
         -- use Shout (can cross region border up to 100m)
         ll.Shout(channel, lljson.encode(output))
-        if enConsole then enConsole.Trace(`{func_trace} ➔ ll.Shout({channel}, ...)`) end
+        if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ ll.Shout({channel}, ...)`) end
         return payload.id
     end
 
@@ -422,7 +345,7 @@ function enCLEP.Send(
     -- broadcast to all prims in the region
     -- use RegionSay
     ll.RegionSay(channel, lljson.encode(output))
-    if enConsole then enConsole.Trace(`{func_trace} ➔ ll.RegionSay({channel}, ...)`) end
+    if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ ll.RegionSay({channel}, ...)`) end
     return payload.id
 end
 
