@@ -6,7 +6,7 @@ enListen is a general-purpose ll.Listen wrapper. It adds:
     - Built-in lljson.sldecode processing and typechecking
 ]]
 
----!strict
+--!strict
 
 local enListen = {
     _open = {}
@@ -84,6 +84,15 @@ function enListen.Close(domain_or_channel: string | number): boolean
         LLEvents:off("listen", enListen._listen)
     end
     return true
+end
+
+--- Closes all chat listens opened with enListen.Open.
+function enListen.CloseAll(): ()
+    for channel, handle in pairs(enListen._open) do
+        ll.ListenRemove(handle)
+    end
+    enListen._open = {}
+    LLEvents:off("listen", enListen._listen)
 end
 
 -- Internal ll.Listen callback.
