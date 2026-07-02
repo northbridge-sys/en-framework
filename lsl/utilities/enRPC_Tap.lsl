@@ -31,7 +31,7 @@ this prim.
 #define FEATURE_ENCLEP_ALLOW_ALL_TARGET_SCRIPTS
 #define OVERRIDE_ENLOG_DEFAULT_LOGLEVEL 6
 
-#define TRACE_EVENT_ENRPC_MESSAGE
+#define TRACE_EVENT_ENCLEP_MESSAGE
 
 #include "northbridge-sys/en-framework/lsl/libraries.lsl"
 

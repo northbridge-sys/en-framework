@@ -105,7 +105,7 @@ function enListen._listen(channel: number, name: string, source_uuid: uuid, mess
         return
     end
 
-    local success, data = pcall(lljson.sldecode, message)
+    local success, data = pcall(lljson.decode, message)
     if not success then return end
     if typeof(data) ~= listen.type and listen.type ~= "" then return end
 

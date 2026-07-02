@@ -107,13 +107,13 @@ function enCLEP.Init(
     enConsole.Trace(`enCLEP initialized`)
 end
 
-function enCLEP._link_message(linknum: number, num: number, message: string, key: string): ()
+function enCLEP._link_message(linknum: number, num: number, message: string, data: any): ()
 
     --enConsole.Trace(`enCLEP.LEP._link_message({linknum}, {num}, "{message}", "{key}") ➔ ...`)
 
-    local success, clep = pcall(enCLEP.Unmarshal, message, {prim = ll.GetLinkKey(linknum), link = linknum})
+    local success, clep = pcall(enCLEP.Unmarshal, data, {prim = ll.GetLinkKey(linknum), link = linknum})
     if not success then
-        if enCLEP._verbose then enConsole.Trace(`Dropped CLEP message from link {linknum}: {clep}\n{message}`) end
+        if enCLEP._verbose then enConsole.Trace(`Dropped CLEP message from link {linknum}: {clep}`) end
         return
     end
 
@@ -125,13 +125,13 @@ function enCLEP._link_message(linknum: number, num: number, message: string, key
     handler(clep)
 end
 
-function enCLEP._listen(domain: string | number, name: string, key: uuid, message: string): ()
+function enCLEP._listen(domain: string | number, name: string, key: uuid, data: any): ()
     
     --enConsole.Trace(`enCLEP._listen({channel}, "{name}", "{key}", "{message}") ➔ ...`)
 
-    local success, clep = pcall(enCLEP.Unmarshal, message, {prim = key})
+    local success, clep = pcall(enCLEP.Unmarshal, data, {prim = key})
     if not success then
-        if enCLEP._verbose then enConsole.Trace(`Dropped CLEP message from {key}: {clep}\n{message}`) end
+        if enCLEP._verbose then enConsole.Trace(`Dropped CLEP message from {key}: {clep}`) end
         return
     end
 
@@ -344,17 +344,20 @@ function enCLEP.Send(
     -- no target set
     -- broadcast to all prims in the region
     -- use RegionSay
+    print(lljson.encode(output))
     ll.RegionSay(channel, lljson.encode(output))
     if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ ll.RegionSay({channel}, ...)`) end
     return payload.id
 end
 
-function enCLEP.Unmarshal(message: string, source: {prim: uuid, link: number?}): Message?
+function enCLEP.Unmarshal(data: any, source: {prim: uuid, link: number?}): Message?
 
-    local success, data = pcall(lljson.decode, message)
-    if not success then error(`Not valid CLEP message`) end -- not a valid CLEP message
-
-    local data_payload = lljson.decode(data.payload)
+    local data_payload
+    if data.payload then -- payload is encapsulated
+        data_payload = lljson.decode(data.payload)
+    else -- payload is not encapsulated
+        data_payload = data
+    end
 
     local id_u = touuid(data_payload.id)
 

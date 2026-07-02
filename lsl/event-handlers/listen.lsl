@@ -17,9 +17,9 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 // if we want to receive any CLEP messages, trigger _enCLEP_listen()
-#if (defined FEATURE_ENCLEP_PROTOCOL_CLEP || defined FEATURE_ENCLEP_PROTOCOL_CLEP_INBOUND)
+#if (defined FEATURE_ENCLEP_USE_CHAT || defined FEATURE_ENCLEP_USE_CHAT_INBOUND)
     #define _EVENT_LISTEN
-    #define _HOOK_ENRPC_LISTEN
+    #define _HOOK_ENCLEP_LISTEN
 #endif
 
 // if we defined EVENT_EN_LISTEN, pass all non-caught listen() events to en_listen()
@@ -61,7 +61,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
             );
         #endif
 
-        #if defined _HOOK_ENRPC_LISTEN
+        #if defined _HOOK_ENCLEP_LISTEN
 		    if (~_enCLEP_listen(channel, name, id, message) & CONST_INTEGER_NEGATIVE) return; // positive/zero = caught, negative = rejected
         #endif
         

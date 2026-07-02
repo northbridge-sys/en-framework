@@ -242,7 +242,7 @@ Several reasons:
 
 ### Don't the additional function definitions increase script memory?
 
-En dynamically generates event handlers depending on the flags you define in the script. For example, defining `FEATURE_ENCLEP_PROTOCOL_CLEP` creates a `listen` event handler, passing CLEP requests to `enCLEP_messages()` and any other messages to `en_listen()` if `EVENT_EN_LISTEN` is defined.
+En dynamically generates event handlers depending on the flags you define in the script. For example, defining `FEATURE_ENCLEP_USE_CHAT` creates a `listen` event handler, passing CLEP requests to `enCLEP_messages()` and any other messages to `en_listen()` if `EVENT_EN_LISTEN` is defined.
 
 Since LSL does not support dynamic event subscription or multiple event handlers, the only way to accomplish this is to have En generate event handlers itself and pass events to En-defined and user-defined functions depending on which features are enabled.
 

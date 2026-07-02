@@ -1,13 +1,13 @@
 #define EVENT_EN_STATE_ENTRY
-#define EVENT_ENRPC_MESSAGE
+#define EVENT_ENCLEP_MESSAGE
 
 //#define FEATURE_ENCLEP_PROTOCOL_ROUTING
-#define FEATURE_ENCLEP_PROTOCOL_CLEP
-#define FEATURE_ENCLEP_PROTOCOL_LEP
+#define FEATURE_ENCLEP_USE_CHAT
+#define FEATURE_ENCLEP_USE_LINK_MESSAGE
 //#define FEATURE_ENCLEP_PROTOCOL_SIGNING
 //#define FEATURE_ENCLEP_SIGNATURE_VERIFICATION
 
-#define OVERRIDE_STRING_ENRPC_LEP_DOMAIN "CLEP Test Domain"
+#define OVERRIDE_STRING_ENCLEP_LINK_MESSAGE_DOMAIN "CLEP Test Domain"
 
 #include "northbridge-sys/en-framework/lsl/libraries.lsl"
 
@@ -23,36 +23,36 @@ en_state_entry()
         TESTER_KEY_NAME = ""; // use a blank TESTER_KEY_NAME if signing is disabled, otherwise the messages will be dropped
     #endif
     
-    enCLEP_Listen(OVERRIDE_STRING_ENRPC_LEP_DOMAIN, FLAG_ENRPC_LISTEN_OWNERONLY);
+    enCLEP_Listen(OVERRIDE_STRING_ENCLEP_LINK_MESSAGE_DOMAIN, FLAG_ENCLEP_LISTEN_OWNERONLY);
 }
 
-enrpc_message(
+enclep_message(
     integer flags,
     string key_name,
     integer source_link,
     list data
 )
 {
-    if (~flags & FLAG_ENRPC_TYPE_REQUEST) return;
+    if (~flags & FLAG_ENCLEP_TYPE_REQUEST) return;
 
     if (key_name != TESTER_KEY_NAME) return; // reject unsigned/missigned messages
 
-    string method = llList2String(data, CONST_ENRPC_DATA_METHOD);
-    if (llList2String(data, CONST_ENRPC_DATA_METHOD) != "ping") return; // only respond if method is "ping"
+    string method = llList2String(data, CONST_ENCLEP_DATA_METHOD);
+    if (llList2String(data, CONST_ENCLEP_DATA_METHOD) != "ping") return; // only respond if method is "ping"
 
-    string domain = llList2String(data, CONST_ENRPC_DATA_DOMAIN);
-    string source_region = llList2String(data, CONST_ENRPC_DATA_SOURCE_REGION);
-    string source_prim = llList2String(data, CONST_ENRPC_DATA_SOURCE_PRIM);
-    string source_script = llList2String(data, CONST_ENRPC_DATA_SOURCE_SCRIPT);
-    string id = llList2String(data, CONST_ENRPC_DATA_ID);
-    string params = llList2String(data, CONST_ENRPC_DATA_PARAMS);
+    string domain = llList2String(data, CONST_ENCLEP_DATA_DOMAIN);
+    string source_region = llList2String(data, CONST_ENCLEP_DATA_SOURCE_REGION);
+    string source_prim = llList2String(data, CONST_ENCLEP_DATA_SOURCE_PRIM);
+    string source_script = llList2String(data, CONST_ENCLEP_DATA_SOURCE_SCRIPT);
+    string id = llList2String(data, CONST_ENCLEP_DATA_ID);
+    string params = llList2String(data, CONST_ENCLEP_DATA_PARAMS);
 
-    enLog_Info("Got " + llList2String(["LEP", "CLEP", "SNEP"], llListFindList([FLAG_ENRPC_PROTOCOL_LEP, FLAG_ENRPC_PROTOCOL_CLEP, FLAG_ENRPC_PROTOCOL_SNEP], [flags & (FLAG_ENRPC_PROTOCOL_LEP | FLAG_ENRPC_PROTOCOL_CLEP | FLAG_ENRPC_PROTOCOL_SNEP)])) + " ping on domain \"" + domain + "\" using key \"" + key_name + "\" with ID \"" + id + "\" and params: " + params);
+    enLog_Info("Got " + llList2String(["LEP", "CLEP", "SNEP"], llListFindList([FLAG_ENCLEP_USE_LINK_MESSAGE, FLAG_ENCLEP_USE_CHAT, FLAG_ENCLEP_PROTOCOL_SNEP], [flags & (FLAG_ENCLEP_USE_LINK_MESSAGE | FLAG_ENCLEP_USE_CHAT | FLAG_ENCLEP_PROTOCOL_SNEP)])) + " ping on domain \"" + domain + "\" using key \"" + key_name + "\" with ID \"" + id + "\" and params: " + params);
 
     // respond to request
-    if (flags & FLAG_ENRPC_PROTOCOL_LEP)
+    if (flags & FLAG_ENCLEP_USE_LINK_MESSAGE)
     {
-        enCLEP_LEPResultSigned(
+        enCLEP_LinkMessageResultSigned(
             TESTER_KEY_NAME, // this must match key_name above (not necessarily in the source)
             source_link, // you may send messages to any link or script, not just the source link
             source_script, // however, typically you'd only respond to the source_link and source_script that sent the request
@@ -63,9 +63,9 @@ enrpc_message(
             "{\"mid\":\"" + llGetTimestamp() + "\"}" // respond with result as timestamp
         );
     }
-    if (flags & FLAG_ENRPC_PROTOCOL_CLEP)
+    if (flags & FLAG_ENCLEP_USE_CHAT)
     {
-        enCLEP_CLEPResultSigned(
+        enCLEP_ChatResultSigned(
             TESTER_KEY_NAME, // this must match key_name above (not necessarily in the source)
             source_region, // source region
             source_prim, // source prim

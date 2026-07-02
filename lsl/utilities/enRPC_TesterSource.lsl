@@ -1,13 +1,13 @@
 #define EVENT_EN_STATE_ENTRY
-#define EVENT_ENRPC_MESSAGE
+#define EVENT_ENCLEP_MESSAGE
 
 //#define FEATURE_ENCLEP_PROTOCOL_ROUTING
-#define FEATURE_ENCLEP_PROTOCOL_CLEP
-#define FEATURE_ENCLEP_PROTOCOL_LEP
+#define FEATURE_ENCLEP_USE_CHAT
+#define FEATURE_ENCLEP_USE_LINK_MESSAGE
 //#define FEATURE_ENCLEP_PROTOCOL_SIGNING
 //#define FEATURE_ENCLEP_SIGNATURE_VERIFICATION
 
-#define OVERRIDE_STRING_ENRPC_LEP_DOMAIN "CLEP Test Domain"
+#define OVERRIDE_STRING_ENCLEP_LINK_MESSAGE_DOMAIN "CLEP Test Domain"
 
 #include "northbridge-sys/en-framework/lsl/libraries.lsl"
 
@@ -25,7 +25,7 @@ en_state_entry()
         TESTER_KEY_NAME = ""; // use a blank TESTER_KEY_NAME if signing is disabled, otherwise the messages will be dropped
     #endif
 
-    enCLEP_Listen(OVERRIDE_STRING_ENRPC_LEP_DOMAIN, FLAG_ENRPC_LISTEN_OWNERONLY);
+    enCLEP_Listen(OVERRIDE_STRING_ENCLEP_LINK_MESSAGE_DOMAIN, FLAG_ENCLEP_LISTEN_OWNERONLY);
     
     // return id can be stored for reference later if you want
     string id = enCLEP_HybridRequestSigned(
@@ -33,7 +33,7 @@ en_state_entry()
         "", // target_region
         "", // target_prim
         TESTER_TARGET_SCRIPT, // target_script
-        OVERRIDE_STRING_ENRPC_LEP_DOMAIN, // domain - we use the LEP domain for convenience here
+        OVERRIDE_STRING_ENCLEP_LINK_MESSAGE_DOMAIN, // domain - we use the LEP domain for convenience here
         "ping", // method
         "{\"start\":\"" + llGetTimestamp() + "\"}", // params
         llGenerateKey() // id
@@ -42,33 +42,33 @@ en_state_entry()
     enLog_Info("Sent hybrid ping with ID \"" + id + "\" using key \"" + TESTER_KEY_NAME + "\"");
 }
 
-enrpc_message(
+enclep_message(
     integer flags,
     string key_name,
     integer source_link,
     list data
 )
 {
-    if (~flags & FLAG_ENRPC_TYPE_RESULT) return;
+    if (~flags & FLAG_ENCLEP_TYPE_RESULT) return;
 
     if (key_name != TESTER_KEY_NAME) return; // reject unsigned/missigned messages
 
-    string method = llList2String(data, CONST_ENRPC_DATA_METHOD);
-    if (llList2String(data, CONST_ENRPC_DATA_METHOD) != "ping") return; // only respond if method is "ping"
+    string method = llList2String(data, CONST_ENCLEP_DATA_METHOD);
+    if (llList2String(data, CONST_ENCLEP_DATA_METHOD) != "ping") return; // only respond if method is "ping"
 
-    string domain = llList2String(data, CONST_ENRPC_DATA_DOMAIN);
-    string source_region = llList2String(data, CONST_ENRPC_DATA_SOURCE_REGION);
-    string source_script = llList2String(data, CONST_ENRPC_DATA_SOURCE_SCRIPT);
-    string id = llList2String(data, CONST_ENRPC_DATA_ID);
-    string params = llList2String(data, CONST_ENRPC_DATA_PARAMS);
-    string result = llList2String(data, CONST_ENRPC_DATA_RESULT);
+    string domain = llList2String(data, CONST_ENCLEP_DATA_DOMAIN);
+    string source_region = llList2String(data, CONST_ENCLEP_DATA_SOURCE_REGION);
+    string source_script = llList2String(data, CONST_ENCLEP_DATA_SOURCE_SCRIPT);
+    string id = llList2String(data, CONST_ENCLEP_DATA_ID);
+    string params = llList2String(data, CONST_ENCLEP_DATA_PARAMS);
+    string result = llList2String(data, CONST_ENCLEP_DATA_RESULT);
 
     // convert timestamps into arbitrary millisecond-accurate integers, then get the differences between them for benchmarking
     integer start = enDatetime_TimestampToMillisec(llJsonGetValue(params, ["start"])); // params is a timestamp string
     integer mid = enDatetime_TimestampToMillisec(llJsonGetValue(result, ["mid"])); // result is a timestamp string
     integer end = enDatetime_NowToMillisec();
     
-    enLog_Success("Got " + llList2String(["LEP", "CLEP", "SNEP"], llListFindList([FLAG_ENRPC_PROTOCOL_LEP, FLAG_ENRPC_PROTOCOL_CLEP, FLAG_ENRPC_PROTOCOL_SNEP], [flags & (FLAG_ENRPC_PROTOCOL_LEP | FLAG_ENRPC_PROTOCOL_CLEP | FLAG_ENRPC_PROTOCOL_SNEP)])) + " ping result for ID \"" + id + "\" (" + (string)enDatetime_AddMillisec(mid, -start) + "ms for request, " + (string)enDatetime_AddMillisec(end, -mid) + "ms for result) using key \"" + key_name + "\"");
+    enLog_Success("Got " + llList2String(["LEP", "CLEP", "SNEP"], llListFindList([FLAG_ENCLEP_USE_LINK_MESSAGE, FLAG_ENCLEP_USE_CHAT, FLAG_ENCLEP_PROTOCOL_SNEP], [flags & (FLAG_ENCLEP_USE_LINK_MESSAGE | FLAG_ENCLEP_USE_CHAT | FLAG_ENCLEP_PROTOCOL_SNEP)])) + " ping result for ID \"" + id + "\" (" + (string)enDatetime_AddMillisec(mid, -start) + "ms for request, " + (string)enDatetime_AddMillisec(end, -mid) + "ms for result) using key \"" + key_name + "\"");
 }
 
 default
