@@ -3,7 +3,7 @@ enListen is a general-purpose ll.Listen wrapper. It adds:
     - Domains (strings that are hashed into a negative chat channel lower than about -1,000,000,000, which avoids conflicts and ensures maximum 1024-byte limit for messages)
     - Proper error reporting for exceeding limit of 65 listens (the ll.Listen call shouts on DEBUG_CHANNEL even if you catch it with pcall())
     - Built-in same-owner filtering
-    - Built-in lljson.sldecode processing and typechecking
+    - Built-in lljson.decode processing and typechecking
 ]]
 
 --!strict
@@ -65,9 +65,12 @@ function enListen.Open(
         end
     end
     
-    -- all good, open the listen
-    LLEvents:on("listen", enListen._listen)
-    local handle = ll.Listen(channel, name or "", source_uuid or uuid(NULL_KEY), message or "")
+    if next(enListen._open) == nil then
+        -- first chat listen, subscribe to the listen event
+        LLEvents:on("listen", enListen._listen)
+    end
+
+    local handle = ll.Listen(channel, name or "", source_uuid or uuid(NULL_KEY) :: uuid, message or "")
     enListen._open[channel] = {domain = domain_or_channel, handle = handle, owner_only = owner_only, type = type, callback = callback}
 end
 
@@ -79,10 +82,12 @@ function enListen.Close(domain_or_channel: string | number): boolean
     if not enListen._open[channel] then return false end
     ll.ListenRemove(enListen._open[channel].handle)
     enListen._open[channel] = nil
+
     if next(enListen._open) == nil then
-        -- no more open listens
+        -- no more open listens, unsubscribe from the listen event
         LLEvents:off("listen", enListen._listen)
     end
+
     return true
 end
 
@@ -92,24 +97,25 @@ function enListen.CloseAll(): ()
         ll.ListenRemove(handle)
     end
     enListen._open = {}
+    -- always unsubscribe
     LLEvents:off("listen", enListen._listen)
 end
 
 -- Internal ll.Listen callback.
-function enListen._listen(channel: number, name: string, source_uuid: uuid, message: string): ()
+function enListen._listen(channel: number, name: string, source_uuid: uuid, message: string): any?
+    --print(`{ll.GetKey()} got: {message}`)
     local listen = enListen._open[channel]
-    if not listen then return end
-    if listen.owner_only and ll.GetOwnerKey(source_uuid) ~= ll.GetOwner() then return end
+    if not listen then return 0x1 end
+    if listen.owner_only and ll.GetOwnerKey(source_uuid) ~= ll.GetOwner() then return 0x2 end
     if listen.type == nil then
-        listen.callback(channel, name, source_uuid, message)
-        return
+        return listen.callback(channel, name, source_uuid, message)
     end
 
     local success, data = pcall(lljson.decode, message)
-    if not success then return end
-    if typeof(data) ~= listen.type and listen.type ~= "" then return end
+    if not success then return 0x3 end
+    if typeof(data) ~= listen.type and listen.type ~= "" then return 0x4 end
 
-    listen.callback(channel, name, source_uuid, data)
+    return listen.callback(channel, name, source_uuid, data)
 end
 
 return enListen

@@ -8,6 +8,7 @@ if so, write the routing data via relay encapsulation protocol that adds a hash 
 ]]
 
 local enConsole: typeof(require("@en-framework/enConsole"))
+local enDump: typeof(require("@en-framework/enDump")) -- only required if verbose logging is enabled and inbound event logging is desired
 local enListen: typeof(require("@en-framework/enListen"))
 local enSNEP: typeof(require("@en-framework/enSNEP"))
 
@@ -98,49 +99,57 @@ function enCLEP.Init(
     dependency_enConsole: typeof(enConsole),
     dependency_enListen: typeof(enListen),
     verbose_logging: boolean?,
+    dependency_enDump: typeof(enDump)?,
     dependency_enSNEP: typeof(enSNEP)?): ()
     enConsole = dependency_enConsole
     enListen = dependency_enListen
+    if dependency_enDump then enDump = dependency_enDump end
     if dependency_enSNEP then enSNEP = dependency_enSNEP end
     enCLEP._verbose = verbose_logging or false
     enCLEP._init = true
     enConsole.Trace(`enCLEP initialized`)
 end
 
-function enCLEP._link_message(linknum: number, num: number, message: string, data: any): ()
+function enCLEP._link_message(linknum: number, num: number, message: string, key: string): any?
 
-    --enConsole.Trace(`enCLEP.LEP._link_message({linknum}, {num}, "{message}", "{key}") ➔ ...`)
+    if enCLEP._verbose then enConsole.Trace(`enCLEP._link_message({linknum}, {num}, "{message}", "{key}") ➔ ...`) end
+
+    -- for link messages, they are passed in raw, so we have to decode them ourselves first
+    local success_json, data = pcall(lljson.decode, message)
+    if not success_json then return 0x10 end
+    if typeof(data) ~= "table" then return 0x11 end
 
     local success, clep = pcall(enCLEP.Unmarshal, data, {prim = ll.GetLinkKey(linknum), link = linknum})
     if not success then
         if enCLEP._verbose then enConsole.Trace(`Dropped CLEP message from link {linknum}: {clep}`) end
-        return
+        return 0x12
     end
 
-    if not clep then return end -- silently dropped message
+    if not clep then return 0x13 end -- silently dropped message
 
-    if not enCLEP._link.handlers[clep.payload.domain] then return end -- not listening to this domain
+    if not enCLEP._link.handlers[clep.payload.domain] then return 0x14 end -- not listening to this domain
 
     local handler = enCLEP._link.handlers[clep.payload.domain]
-    handler(clep)
+    return handler(clep)
 end
 
-function enCLEP._listen(domain: string | number, name: string, key: uuid, data: any): ()
+function enCLEP._listen(domain: string | number, name: string, key: uuid, data: any): any?
     
-    --enConsole.Trace(`enCLEP._listen({channel}, "{name}", "{key}", "{message}") ➔ ...`)
+    if enCLEP._verbose and enDump then enConsole.Trace(`enCLEP._listen("{domain}", "{name}", "{key}", {enDump.Table(data)}) ➔ ...`) end
 
+    -- for listens, enListen does the json decode and passes a raw data value, so we can skip the decode here
     local success, clep = pcall(enCLEP.Unmarshal, data, {prim = key})
     if not success then
         if enCLEP._verbose then enConsole.Trace(`Dropped CLEP message from {key}: {clep}`) end
-        return
+        return 0x10
     end
 
-    if not clep then return end -- silently dropped message
+    if not clep then return 0x11 end -- silently dropped message
 
-    if not enCLEP._chat.handlers[clep.payload.domain] then return end -- not listening to this domain
+    if not enCLEP._chat.handlers[clep.payload.domain] then return 0x12 end -- not listening to this domain
 
     local handler = enCLEP._chat.handlers[clep.payload.domain]
-    handler(clep)
+    return handler(clep)
 end
 
 function enCLEP.ListenLink(domain: string, handler_function: (clep: Message) -> ()): ()
@@ -153,7 +162,11 @@ function enCLEP.ListenLink(domain: string, handler_function: (clep: Message) -> 
         return
     end
 
-    LLEvents:on("link_message", enCLEP._link_message)
+    if next(enCLEP._link.handlers) == nil then
+        -- first link listen, subscribe to the link_message event
+        LLEvents:on("link_message", enCLEP._link_message)
+    end
+
     enCLEP._link.handlers[domain] = handler_function
 end
 
@@ -163,7 +176,7 @@ function enCLEP.ListenChat(domain: string, owner_only: boolean, handler_function
     enListen.Open(enCLEP._listen, owner_only, domain, nil, source_uuid, nil, "table")
     enCLEP._chat.handlers[domain] = handler_function
 
-    enConsole.Trace(`enCLEP.ListenChat("{domain}" ({enListen.ToChannel(domain)}), {owner_only}, ...) ➔ {enCLEP._chat.handlers[domain]}`)
+    enConsole.Trace(`enCLEP.ListenChat("{domain}" ({enListen.ToChannel(domain)}), {owner_only}, ...)`)
 end
 
 function enCLEP.ListenRemoveLink(domain: string): ()
@@ -344,10 +357,13 @@ function enCLEP.Send(
     -- no target set
     -- broadcast to all prims in the region
     -- use RegionSay
-    print(lljson.encode(output))
     ll.RegionSay(channel, lljson.encode(output))
     if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ ll.RegionSay({channel}, ...)`) end
     return payload.id
+end
+
+function enCLEP._MissingElement(path: string, required: string, got: string): ()
+    error(`Missing CLEP element {path} as {required} (got {got})`)
 end
 
 function enCLEP.Unmarshal(data: any, source: {prim: uuid, link: number?}): Message?
@@ -359,19 +375,14 @@ function enCLEP.Unmarshal(data: any, source: {prim: uuid, link: number?}): Messa
         data_payload = data
     end
 
+    if typeof(data_payload.utime) ~= "number" then enCLEP._MissingElement("utime", "number", typeof(data_payload.utime)) end
+    if typeof(data_payload.source.region) ~= "string" then enCLEP._MissingElement("source.region", "string", typeof(data_payload.source.region)) end
+    if typeof(data_payload.source.prim) ~= "string" then enCLEP._MissingElement("source.prim", "string", typeof(data_payload.source.prim)) end
+    if typeof(data_payload.source.script) ~= "string" then enCLEP._MissingElement("source.script", "string", typeof(data_payload.source.script)) end
+    if typeof(data_payload.target) ~= "table" then enCLEP._MissingElement("target", "table", typeof(data_payload.target)) end
+    if typeof(data_payload.domain) ~= "string" then enCLEP._MissingElement("domain", "string", typeof(data_payload.domain)) end
     local id_u = touuid(data_payload.id)
-
-    if     typeof(data_payload.utime) ~= "number"
-        or typeof(data_payload.source.region) ~= "string"
-        or typeof(data_payload.source.prim) ~= "string"
-        or typeof(data_payload.source.script) ~= "string"
-        or typeof(data_payload.target) ~= "table"
-        or typeof(data_payload.domain) ~= "string"
-        or typeof(data_payload.id) ~= "string"
-        or not id_u
-    then
-        error(`Missing required CLEP element`)
-    end
+    if typeof(data_payload.id) ~= "string" or not id_u then enCLEP._MissingElement("id", "string", typeof(data_payload.id)) end
 
     local payload = {
         utime = data_payload.utime,
