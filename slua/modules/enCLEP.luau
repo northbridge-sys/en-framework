@@ -176,7 +176,7 @@ function enCLEP.ListenChat(domain: string, owner_only: boolean, handler_function
     enListen.Open(enCLEP._listen, owner_only, domain, nil, source_uuid, nil, "table")
     enCLEP._chat.handlers[domain] = handler_function
 
-    enConsole.Trace(`enCLEP.ListenChat("{domain}" ({enListen.ToChannel(domain)}), {owner_only}, ...)`)
+    enConsole.Trace(`enCLEP.ListenChat("{domain}" ({enListen.CHUF(domain)}), {owner_only}, ...)`)
 end
 
 function enCLEP.ListenRemoveLink(domain: string): ()
@@ -274,7 +274,7 @@ function enCLEP.Send(
         output.utime = os.time()
     end
 
-    local channel = enListen.ToChannel(payload.domain);
+    local channel = enListen.CHUF(payload.domain);
 
     --[[
     Possible target configurations:

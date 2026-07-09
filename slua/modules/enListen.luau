@@ -12,10 +12,10 @@ local enListen = {
     _open = {}
 }
 
---- Hashes a string into a number that can be safely used as a script-to-script chat channel.
+--- Hashes a string into a number that can be safely used as a script-to-script chat channel using the CHUF: https://gsi.sh/rec/chuf
 -- @param domain Domain string.
 -- @return number Channel number.
-function enListen.ToChannel(domain_or_channel: string | number): number
+function enListen.CHUF(domain_or_channel: string | number): number
     if typeof(domain_or_channel) == "number" then return domain_or_channel end -- pass numbers back as channels
     -- ORing with 0x80000000 guarantees the number is negative, which can't be sent via typical viewers
     -- ORing with 0x40000000 guarantees the number is lower than -1073741807, which is basically fair game for conflicts
@@ -53,7 +53,7 @@ function enListen.Open(
     for _ in pairs(enListen._open) do count += 1 end
     assert(count < 65, "Too many listens") -- maximum 65 listens per script
 
-    local channel = enListen.ToChannel(domain_or_channel)
+    local channel = enListen.CHUF(domain_or_channel)
 
     if enListen._open[channel] then
         -- we have a channel conflict
@@ -78,7 +78,7 @@ end
 -- @param domain_or_channel Domain string or channel number to find.
 -- @return boolean True if a listen was closed; false if none was found.
 function enListen.Close(domain_or_channel: string | number): boolean
-    local channel = enListen.ToChannel(domain_or_channel)
+    local channel = enListen.CHUF(domain_or_channel)
     if not enListen._open[channel] then return false end
     ll.ListenRemove(enListen._open[channel].handle)
     enListen._open[channel] = nil
