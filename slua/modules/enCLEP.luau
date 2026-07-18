@@ -7,6 +7,8 @@ check source.region and see if region has a known routing
 if so, write the routing data via relay encapsulation protocol that adds a hash of each routing step to encapsulation layer for loopback detection and packet return
 ]]
 
+local enCHUF = require("@en-framework/enCHUF")
+
 local enConsole: typeof(require("@en-framework/enConsole"))
 local enDump: typeof(require("@en-framework/enDump")) -- only required if verbose logging is enabled and inbound event logging is desired
 local enListen: typeof(require("@en-framework/enListen"))
@@ -176,7 +178,7 @@ function enCLEP.ListenChat(domain: string, owner_only: boolean, handler_function
     enListen.Open(enCLEP._listen, owner_only, domain, nil, source_uuid, nil, "table")
     enCLEP._chat.handlers[domain] = handler_function
 
-    enConsole.Trace(`enCLEP.ListenChat("{domain}" ({enListen.CHUF(domain)}), {owner_only}, ...)`)
+    enConsole.Trace(`enCLEP.ListenChat("{domain}" ({enCHUF.Channel(domain)}), {owner_only}, ...)`)
 end
 
 function enCLEP.ListenRemoveLink(domain: string): ()
@@ -274,7 +276,7 @@ function enCLEP.Send(
         output.utime = os.time()
     end
 
-    local channel = enListen.CHUF(payload.domain);
+    local channel = enCHUF.Channel(payload.domain);
 
     --[[
     Possible target configurations:
