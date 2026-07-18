@@ -1,7 +1,8 @@
 --!strict
 
+local enEscape = require("enEscape")
+
 local enConsole: typeof(require("enConsole"))
-local enEscape: typeof(require("enEscape"))
 
 local enLNX = {
     _init = false
@@ -16,9 +17,10 @@ enLNX.SCOPE = {
 enLNX._scriptname = ""
 enLNX._primuuid = NULL_KEY
 
-function enLNX.Init(dependency_enConsole: typeof(require("enConsole")), dependency_enEscape: typeof(require("enEscape"))): ()
+function enLNX.Init(
+    dependency_enConsole: typeof(require("enConsole"))
+): ()
     enConsole = dependency_enConsole
-    enEscape = dependency_enEscape
     enLNX._init = true
 end
 
@@ -188,9 +190,8 @@ function enLNX._Purge(): ()
 end
 
 function enLNX._MigratePrim(old_prim_uuid: uuid): ()
-    assert(enLNX._init, `Run enLNX.Init() first`)
     if not old_prim_uuid or old_prim_uuid == uuid(NULL_KEY) or old_prim_uuid == ll.GetKey() then return end
-    enConsole.Debug(`Migrating LNX datastore for prim {old_prim_uuid} to prim {ll.GetKey()}`)
+    if enConsole then enConsole.Debug(`Migrating LNX datastore for prim {old_prim_uuid} to prim {ll.GetKey()}`) end
     local keys = ll.LinksetDataFindKeys(`^{enEscape.Regex(tostring(old_prim_uuid))}\n.*\n.*$`, 1, 1)
     while keys[1] do
         local s_old_key = tostring(keys[1])
@@ -202,7 +203,7 @@ function enLNX._MigratePrim(old_prim_uuid: uuid): ()
         new_key[1] = tostring(ll.GetKey())
         ll.LinksetDataWrite(table.concat(new_key, "\n"), ll.LinksetDataRead(s_old_key))
         ll.LinksetDataDelete(s_old_key)
-        enConsole.Trace(`LNX pair \{{table.concat(old_key, ",")}\} prim-migrated to \{{table.concat(new_key, ",")}\}`)
+        if enConsole then enConsole.Trace(`LNX pair \{{table.concat(old_key, ",")}\} prim-migrated to \{{table.concat(new_key, ",")}\}`) end
         keys = ll.LinksetDataFindKeys(`^{enEscape.Regex(tostring(old_prim_uuid))}\n.*\n.*$`, 1, 1)
     end
 end
