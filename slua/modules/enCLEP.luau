@@ -7,7 +7,8 @@ check source.region and see if region has a known routing
 if so, write the routing data via relay encapsulation protocol that adds a hash of each routing step to encapsulation layer for loopback detection and packet return
 ]]
 
-local CLEP = require("@en-framework/types/CLEP")
+local enCLEPTypes = require("@en-framework/types/enCLEPTypes")
+local enSNEPTypes = require("@en-framework/types/enSNEPTypes")
 
 local enCHUF = require("@en-framework/enCHUF")
 
@@ -86,7 +87,7 @@ function enCLEP._listen(domain: string | number, name: string, key: uuid, data: 
     return handler(clep)
 end
 
-function enCLEP.ListenLink(domain: string, handler_function: (clep: Message) -> ()): ()
+function enCLEP.ListenLink(domain: string, handler_function: (clep: enCLEPTypes.Message) -> ()): ()
     if not enCLEP._init then error(enCLEP._initstring) end
     enConsole.Trace(`enCLEP.ListenLink("{domain}", ...)`)
 
@@ -104,7 +105,7 @@ function enCLEP.ListenLink(domain: string, handler_function: (clep: Message) -> 
     enCLEP._link.handlers[domain] = handler_function
 end
 
-function enCLEP.ListenChat(domain: string, owner_only: boolean, handler_function: (clep: Message) -> (), source_uuid: uuid?): ()
+function enCLEP.ListenChat(domain: string, owner_only: boolean, handler_function: (clep: enCLEPTypes.Message) -> (), source_uuid: uuid?): ()
     if not enCLEP._init then error(enCLEP._initstring) end
 
     enListen.Open(enCLEP._listen, owner_only, domain, nil, source_uuid, nil, "table")
@@ -158,7 +159,7 @@ function enCLEP.ListenRemoveChatAll(): ()
 end
 
 function enCLEP.Send(
-    key: enSNEP.Key?,
+    key: enSNEPTypes.Key?,
     target: {
         region: string?,
         prim: uuid?,
@@ -297,8 +298,8 @@ function enCLEP.Send(
 end
 
 function enCLEP.Respond(
-    key: enSNEP.Key?,
-    clep: Message?,
+    key: enSNEPTypes.Key?,
+    clep: enCLEPTypes.Message?,
     result: any
 ): uuid?
     if not clep then return nil end
@@ -317,7 +318,7 @@ function enCLEP._MissingElement(path: string, required: string, got: string): ()
     error(`Missing CLEP element {path} as {required} (got {got})`)
 end
 
-function enCLEP.Unmarshal(data: any, source: {prim: uuid, link: number?}): CLEP.Message?
+function enCLEP.Unmarshal(data: any, source: {prim: uuid, link: number?}): enCLEPTypes.Message?
 
     local data_payload
     if data.payload then -- payload is encapsulated
@@ -374,7 +375,7 @@ function enCLEP.Unmarshal(data: any, source: {prim: uuid, link: number?}): CLEP.
         end
     end
 
-    return CLEP.new(metadata, payload)
+    return enCLEPTypes.NewMessage({metadata = metadata, payload = payload} :: any)
 end
 
 return enCLEP
