@@ -7,6 +7,8 @@ check source.region and see if region has a known routing
 if so, write the routing data via relay encapsulation protocol that adds a hash of each routing step to encapsulation layer for loopback detection and packet return
 ]]
 
+local CLEP = require("@en-framework/types/CLEP")
+
 local enCHUF = require("@en-framework/enCHUF")
 
 local enConsole: typeof(require("@en-framework/enConsole"))
@@ -27,92 +29,22 @@ local enCLEP = {
 }
 enCLEP.__index = enCLEP
 
--- Message type definition
-
-type MessageType = {
-    metadata: {
-        source: {
-            link: number?,
-            prim: uuid,
-            script: string? -- if an enhanced messaging function ever appears that can guarantee a source script name, it may be used
-        },
-        key_name: string?,
-        hash_algo: string?,
-        sign_algo: "RSA" | "HMAC"?
-    },
-    payload: {
-        utime: number,
-        source: {
-            region: string,
-            prim: uuid,
-            script: string
-        },
-        target: {
-            link: number?,
-            region: string?,
-            prim: uuid?,
-            script: string?
-        },
-        domain: string,
-        id: uuid,
-        method: {string},
-        params: any?,
-        result: any?
-    }
-}
-export type Message = typeof(setmetatable({} :: MessageType, enCLEP))
-
-function enCLEP.NewMessage(
-    metadata: {
-        source: {
-            link: number?,
-            prim: uuid,
-            script: string?
-        },
-        key_name: string?,
-        hash_algo: string?,
-        sign_algo: "RSA" | "HMAC"?
-    },
-    payload: {
-        utime: number,
-        source: {
-            region: string,
-            prim: uuid,
-            script: string
-        },
-        target: {
-            link: number?,
-            region: string?,
-            prim: uuid?,
-            script: string?
-        },
-        domain: string,
-        id: uuid,
-        method: {string},
-        params: any?,
-        result: any?
-    }
-): Message
-    local self = {metadata = metadata, payload = payload}
-    return setmetatable(self, enCLEP)
-end
-
 function enCLEP.Init(
-    dependency_enConsole: typeof(enConsole),
-    dependency_enListen: typeof(enListen),
+    _enConsole: typeof(enConsole),
+    _enListen: typeof(enListen),
     verbose_logging: boolean?,
-    dependency_enDump: typeof(enDump)?,
-    dependency_enSNEP: typeof(enSNEP)?): ()
-    enConsole = dependency_enConsole
-    enListen = dependency_enListen
-    if dependency_enDump then enDump = dependency_enDump end
-    if dependency_enSNEP then enSNEP = dependency_enSNEP end
+    _enDump: typeof(enDump)?,
+    _enSNEP: typeof(enSNEP)?): ()
+    enConsole = _enConsole
+    enListen = _enListen
+    if _enDump then enDump = _enDump end
+    if _enSNEP then enSNEP = _enSNEP end
     enCLEP._verbose = verbose_logging or false
     enCLEP._init = true
     enConsole.Trace(`enCLEP initialized`)
 end
 
-function enCLEP._link_message(linknum: number, num: number, message: string, key: string): any?
+function enCLEP._link_message(linknum: number, num: number, message: string, key: uuid|string): any?
 
     if enCLEP._verbose then enConsole.Trace(`enCLEP._link_message({linknum}, {num}, "{message}", "{key}") ➔ ...`) end
 
@@ -241,7 +173,7 @@ function enCLEP.Send(
     id: uuid?,
     result: any?
 ): uuid
-    if tostring(target.prim) == NULL_KEY then
+    if target.prim == NULL_KEY then
         target.prim = nil -- do not allow passing NULL_KEY as target_prim, because it will not be accepted by anyone
     end
 
@@ -364,11 +296,28 @@ function enCLEP.Send(
     return payload.id
 end
 
+function enCLEP.Respond(
+    key: enSNEP.Key?,
+    clep: Message?,
+    result: any
+): uuid?
+    if not clep then return nil end
+    return enCLEP.Send(
+        key,
+        clep.payload.source :: any,
+        clep.payload.domain,
+        clep.payload.method,
+        clep.payload.params,
+        clep.payload.id,
+        result
+    )
+end
+
 function enCLEP._MissingElement(path: string, required: string, got: string): ()
     error(`Missing CLEP element {path} as {required} (got {got})`)
 end
 
-function enCLEP.Unmarshal(data: any, source: {prim: uuid, link: number?}): Message?
+function enCLEP.Unmarshal(data: any, source: {prim: uuid, link: number?}): CLEP.Message?
 
     local data_payload
     if data.payload then -- payload is encapsulated
@@ -425,7 +374,7 @@ function enCLEP.Unmarshal(data: any, source: {prim: uuid, link: number?}): Messa
         end
     end
 
-    return enCLEP.NewMessage(metadata, payload)
+    return CLEP.new(metadata, payload)
 end
 
 return enCLEP

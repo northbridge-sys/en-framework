@@ -18,9 +18,9 @@ enLNX._scriptname = ""
 enLNX._primuuid = NULL_KEY
 
 function enLNX.Init(
-    dependency_enConsole: typeof(require("enConsole"))
+    _enConsole: typeof(require("enConsole"))
 ): ()
-    enConsole = dependency_enConsole
+    enConsole = _enConsole
     enLNX._init = true
 end
 
