@@ -62,10 +62,11 @@ function enCLEP._link_message(linknum: number, num: number, message: string, key
 
     if not clep then return 0x13 end -- silently dropped message
 
-    if not enCLEP._link.handlers[clep.payload.domain] then return 0x14 end -- not listening to this domain
+    if not enCLEP._link.handlers[clep.payload.domain] then
+        return 0x14
+    end -- not listening to this domain
 
-    local handler = enCLEP._link.handlers[clep.payload.domain]
-    return handler(clep)
+    return enCLEP._link.handlers[clep.payload.domain](clep)
 end
 
 function enCLEP._listen(domain: string | number, name: string, key: uuid, data: any): any?
@@ -81,10 +82,11 @@ function enCLEP._listen(domain: string | number, name: string, key: uuid, data: 
 
     if not clep then return 0x11 end -- silently dropped message
 
-    if not enCLEP._chat.handlers[clep.payload.domain] then return 0x12 end -- not listening to this domain
+    if not enCLEP._chat.handlers[clep.payload.domain] then
+        return 0x12
+    end -- not listening to this domain
 
-    local handler = enCLEP._chat.handlers[clep.payload.domain]
-    return handler(clep)
+    return enCLEP._chat.handlers[clep.payload.domain](clep)
 end
 
 function enCLEP.ListenLink(domain: string, handler_function: (clep: enCLEPTypes.Message) -> ()): ()
