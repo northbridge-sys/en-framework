@@ -384,26 +384,22 @@ function enCLEP._Unmarshal(data: any, source: {prim: uuid, link: number?}): enCL
 
     if typeof(data_payload.utime) ~= "number" then enCLEP._MissingElement("utime", "number", typeof(data_payload.utime)) end
     if typeof(data_payload.source.region) ~= "string" then enCLEP._MissingElement("source.region", "string", typeof(data_payload.source.region)) end
-    if typeof(data_payload.source.prim) ~= "string" then enCLEP._MissingElement("source.prim", "string", typeof(data_payload.source.prim)) end
+    if typeof(data_payload.source.prim) ~= "uuid" then enCLEP._MissingElement("source.prim", "uuid", typeof(data_payload.source.prim)) end
     if typeof(data_payload.source.script) ~= "string" then enCLEP._MissingElement("source.script", "string", typeof(data_payload.source.script)) end
     if typeof(data_payload.target) ~= "table" then enCLEP._MissingElement("target", "table", typeof(data_payload.target)) end
     if typeof(data_payload.domain) ~= "string" then enCLEP._MissingElement("domain", "string", typeof(data_payload.domain)) end
-    local id_u = touuid(data_payload.id)
-    if typeof(data_payload.id) ~= "string" or not id_u then enCLEP._MissingElement("id", "string", typeof(data_payload.id)) end
+    if typeof(data_payload.id) ~= "uuid" then enCLEP._MissingElement("id", "uuid", typeof(data_payload.id)) end
 
     local payload = {
         utime = data_payload.utime,
         source = data_payload.source,
         target = data_payload.target,
         domain = data_payload.domain,
-        id = id_u,
+        id = data_payload.id,
         method = data_payload.method,
         params = data_payload.params,
         result = data_payload.result
     }
-
-    if payload.source.prim then payload.source.prim = touuid(payload.source.prim) end -- convert source.prim back to uuid for type safety
-    if payload.target.prim then payload.target.prim = touuid(payload.target.prim) end -- convert target.prim back to uuid for type safety
 
     if payload.source.script == ll.GetScriptName() and source.link == ll.GetLinkNumber() then return end -- heard own message
 
