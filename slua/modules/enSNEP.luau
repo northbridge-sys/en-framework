@@ -65,7 +65,7 @@ function enSNEP.Sign(payload: string, key: enSNEPTypes.Key, hash_algo: string?):
             key,
             payload
         )
-    elseif key.public_key then
+    elseif key.shared_key then
         return enSNEPTypes._NewSignature(
             "HMAC",
             hash_algo or "sha256",
