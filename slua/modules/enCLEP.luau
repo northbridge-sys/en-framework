@@ -14,7 +14,7 @@ local enCHUF = require("@en-framework/enCHUF")
 
 local enConsole: typeof(require("@en-framework/enConsole"))
 local enDump: typeof(require("@en-framework/enDump")) -- only required if verbose logging is enabled and inbound event logging is desired
-local enListen: typeof(require("@en-framework/enListen"))
+local enListen: typeof(require("@en-framework/enListen"))?
 local enSNEP: typeof(require("@en-framework/enSNEP"))
 
 local enCLEP = {
@@ -30,9 +30,17 @@ local enCLEP = {
 }
 enCLEP.__index = enCLEP
 
+--[[
+Initializes enCLEP. Required on script start.
+@param _enConsole enConsole
+@param _enListen Optional: enListen (only required for chat operations)
+@param verbose_logging Optional: Whether to enable verbose trace logs for deep debugging
+@param _enDump: Optional: enDump (only required for enListen event verbose logging)
+@param _enSNEP: Optional: enSNEP (only required for SNEP signing/validation)
+]]
 function enCLEP.Init(
     _enConsole: typeof(enConsole),
-    _enListen: typeof(enListen),
+    _enListen: typeof(enListen)?,
     verbose_logging: boolean?,
     _enDump: typeof(enDump)?,
     _enSNEP: typeof(enSNEP)?): ()
@@ -54,7 +62,7 @@ function enCLEP._link_message(linknum: number, num: number, message: string, key
     if not success_json then return 0x10 end
     if typeof(data) ~= "table" then return 0x11 end
 
-    local success, clep = pcall(enCLEP.Unmarshal, data, {prim = ll.GetLinkKey(linknum), link = linknum})
+    local success, clep = pcall(enCLEP._Unmarshal, data, {prim = ll.GetLinkKey(linknum), link = linknum})
     if not success then
         if enCLEP._verbose then enConsole.Trace(`Dropped CLEP message from link {linknum}: {clep}`) end
         return 0x12
@@ -74,7 +82,7 @@ function enCLEP._listen(domain: string | number, name: string, key: uuid, data: 
     if enCLEP._verbose and enDump then enConsole.Trace(`enCLEP._listen("{domain}", "{name}", "{key}", {enDump.Table(data)}) ➔ ...`) end
 
     -- for listens, enListen does the json decode and passes a raw data value, so we can skip the decode here
-    local success, clep = pcall(enCLEP.Unmarshal, data, {prim = key})
+    local success, clep = pcall(enCLEP._Unmarshal, data, {prim = key})
     if not success then
         if enCLEP._verbose then enConsole.Trace(`Dropped CLEP message from {key}: {clep}`) end
         return 0x10
@@ -89,8 +97,13 @@ function enCLEP._listen(domain: string | number, name: string, key: uuid, data: 
     return enCLEP._chat.handlers[clep.payload.domain](clep)
 end
 
+--[[
+Starts listening to a CLEP domain via link_message.
+@param domain CLEP domain
+@param handler_function Function that will be called with inbound CLEP link messages that pass all built-in filters
+]]
 function enCLEP.ListenLink(domain: string, handler_function: (clep: enCLEPTypes.Message) -> ()): ()
-    if not enCLEP._init then error(enCLEP._initstring) end
+    assert(enCLEP._init, enCLEP._initstring)
     enConsole.Trace(`enCLEP.ListenLink("{domain}", ...)`)
 
     if enCLEP._link.handlers[domain] then
@@ -107,17 +120,27 @@ function enCLEP.ListenLink(domain: string, handler_function: (clep: enCLEPTypes.
     enCLEP._link.handlers[domain] = handler_function
 end
 
+--[[
+Starts listening to a CLEP domain via chat listen.
+@param domain CLEP domain
+@param owner_only Filters out messages from objects not owned by the same agent (also blocks messages from objects not in the region)
+@param handler_function Function that will be called with inbound CLEP chat messages that pass all built-in filters
+]]
 function enCLEP.ListenChat(domain: string, owner_only: boolean, handler_function: (clep: enCLEPTypes.Message) -> (), source_uuid: uuid?): ()
-    if not enCLEP._init then error(enCLEP._initstring) end
-
+    assert(enCLEP._init, enCLEP._initstring)
+    assert(enListen, "enListen not initialized")
     enListen.Open(enCLEP._listen, owner_only, domain, nil, source_uuid, nil, "table")
     enCLEP._chat.handlers[domain] = handler_function
 
     enConsole.Trace(`enCLEP.ListenChat("{domain}" ({enCHUF.Channel(domain)}), {owner_only}, ...)`)
 end
 
+--[[
+Stops listening to a CLEP domain via link_message.
+@param domain CLEP domain
+]]
 function enCLEP.ListenRemoveLink(domain: string): ()
-    if not enCLEP._init then error(enCLEP._initstring) end
+    assert(enCLEP._init, enCLEP._initstring)
     assert(enCLEP._link.handlers[domain], `Domain not found: {domain}`)
 
     enConsole.Trace(`enCLEP.ListenRemoveLink("{domain}")`)
@@ -130,8 +153,13 @@ function enCLEP.ListenRemoveLink(domain: string): ()
     end
 end
 
+--[[
+Stops listening to a CLEP domain via chat listen.
+@param domain CLEP domain
+]]
 function enCLEP.ListenRemoveChat(domain: string): ()
-    if not enCLEP._init then error(enCLEP._initstring) end
+    assert(enCLEP._init, enCLEP._initstring)
+    assert(enListen, "enListen not initialized")
     assert(enCLEP._chat.handlers[domain], `Domain not found: {domain}`)
 
     enConsole.Trace(`enCLEP.ListenRemoveChat("{domain}")`)
@@ -141,6 +169,9 @@ function enCLEP.ListenRemoveChat(domain: string): ()
     enCLEP._chat.handlers[domain] = nil
 end
 
+--[[
+Stops listening to ALL CLEP domains via link_message.
+]]
 function enCLEP.ListenRemoveLinkAll(): ()
     if next(enCLEP._link.handlers) then return end
 
@@ -151,7 +182,11 @@ function enCLEP.ListenRemoveLinkAll(): ()
     end
 end
 
+--[[
+Stops listening to ALL CLEP domains via chat listen.
+]]
 function enCLEP.ListenRemoveChatAll(): ()
+    assert(enListen, "enListen not initialized")
     if next(enCLEP._chat.handlers) then return end
 
     for domain in pairs(enCLEP._chat.handlers) do
@@ -160,6 +195,17 @@ function enCLEP.ListenRemoveChatAll(): ()
     end
 end
 
+--[[
+Sends a message via CLEP, either via chat or link message, depending on target.
+@param key Optional: enSNEP Key to sign the message with
+@param target A table of "region" (targets only scripts in named region); "prim" (targets only scripts in identified prim); "root" (targets only scripts in linkset with identified prim as root); "link" (targets only scripts in a prim with this link number); "script" (targets only scripts with this inventory name); and "force_chat" (forces the message to be sent via chat, even if it is to another prim in the same linkset) options, all optional and combinable
+@param domain CLEP domain
+@param method CLEP method (array of strings, used for message classification)
+@param params Optional: Any data (required for responses, which must return the request's clep.payload.params)
+@param id Optional: Force a message UUID (required for responses, which must return the request's clep.payload.id)
+@param result Optional: Any data (required for responses, to signal a response)
+@return Message UUID used for outbound message (can be awaited, though there is no guarantee of a response)
+]]
 function enCLEP.Send(
     key: enSNEPTypes.Key?,
     target: {
@@ -299,11 +345,18 @@ function enCLEP.Send(
     return payload.id
 end
 
+--[[
+Responds to a message via CLEP, either via chat or link message, depending on the original source.
+@param key Optional: enSNEP Key to sign the message with
+@param clep enCLEP Message to respond to
+@param result Any data
+@return Message UUID used for outbound message (can generally be ignored)
+]]
 function enCLEP.Respond(
     key: enSNEPTypes.Key?,
     clep: enCLEPTypes.Message?,
     result: any
-): uuid?
+): uuid
     if not clep then return nil end
     return enCLEP.Send(
         key,
@@ -320,7 +373,7 @@ function enCLEP._MissingElement(path: string, required: string, got: string): ()
     error(`Missing CLEP element {path} as {required} (got {got})`)
 end
 
-function enCLEP.Unmarshal(data: any, source: {prim: uuid, link: number?}): enCLEPTypes.Message?
+function enCLEP._Unmarshal(data: any, source: {prim: uuid, link: number?}): enCLEPTypes.Message?
 
     local data_payload
     if data.payload then -- payload is encapsulated
