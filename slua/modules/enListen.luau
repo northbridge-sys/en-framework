@@ -3,7 +3,7 @@ enListen is a general-purpose ll.Listen wrapper. It adds:
     - Domains (strings that are hashed into a negative chat channel lower than about -1,000,000,000, which avoids conflicts and ensures maximum 1024-byte limit for messages)
     - Proper error reporting for exceeding limit of 65 listens (the ll.Listen call shouts on DEBUG_CHANNEL even if you catch it with pcall())
     - Built-in same-owner filtering
-    - Built-in lljson.decode processing and typechecking
+    - Built-in lljson.sldecode processing and typechecking
 ]]
 
 --!strict
@@ -100,7 +100,7 @@ function enListen._listen(channel: number, name: string, source_uuid: uuid, mess
         return listen.callback(channel, name, source_uuid, message)
     end
 
-    local success, data = pcall(lljson.decode, message)
+    local success, data = pcall(lljson.sldecode, message)
     if not success then return 0x3 end
     if typeof(data) ~= listen.type and listen.type ~= "" then return 0x4 end
 
