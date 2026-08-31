@@ -94,6 +94,7 @@ string enKey_Unstrip(
 }
 
 //  strips dashes out of a key and encodes it in Base64 for memory efficiency (36 characters down to 32 in hex, or 24 in Base64)
+// WARNING: this is NOT compatible with llbase64 in SLua!
 string enKey_Compress(
     string k
     )
@@ -107,6 +108,7 @@ string enKey_Compress(
 }
 
 //  adds dashes back into a key that was sent through enKey_Compress(...)
+// WARNING: this is NOT compatible with llbase64 in SLua!
 string enKey_Decompress(
     string k
     )
@@ -120,4 +122,65 @@ string enKey_Decompress(
         + enInteger_ToHex(llBase64ToInteger(llGetSubString(k, 18, 23)), 8);
     // inject dashes and return
     return enKey_Unstrip( k );
+}
+
+string _enKey_i8ToHex(integer i)
+{
+    i = (i | 0x3030) + 0x27 * ((i = (i & 0xF0) << 4 | i & 0xF) + 0x0606 >> 4 & 0x0101);
+    return llChar(i >> 8 & 0xFF) + llChar(i & 0xFF);
+}
+
+string _enKey_i16ToHex(integer i)
+{
+    i = (i | 0x30303030) + 0x27 * ((i = ((i & 0xF000F0) << 4) | (i = (i & 0xFF00) << 8 | i & 0xFF) & 0x0F000F) + 0x06060606 >> 4 & 0x01010101);
+    return llChar(i >> 24 & 0xFF) + llChar(i >> 16 & 0xFF) + llChar(i >> 8 & 0xFF) + llChar(i & 0xFF);
+}
+
+string _enKey_i24ToHex(integer i)
+{
+    return _enKey_i16ToHex(i >> 8 & 0xFFFF) + _enKey_i8ToHex(i & 0xFF);
+}
+
+/*
+Similar to enKey_Compress, but compresses to 22 characters instead of 24.
+This takes considerably more memory so is only recommended if you need to support lljson.slencode/sldecode tight UUIDs.
+Authored by Félix (Coyote.Enthusiast) on 2024-03-17. Released CC-0 2025-08-30. Modified for use in En.
+*/
+string enKey_Compress22(
+    string k
+)
+{
+    if (!enKey_Is(k)) return k; // not a valid key
+    k = enKey_Strip(k);
+
+    integer i;
+    string out;
+    for (; i < 32; i += 6)
+    {
+        integer v = (integer)("0x" + llGetSubString(k, i, i + 5)) << 8;
+        if (i == 30)
+            v = v << 16;
+        out += llGetSubString(llIntegerToBase64(v), 0, 3);
+    }
+    return llGetSubString(out, i, 21);
+}
+
+/*
+Similar to enKey_Decompress, but for enKey_Compress22 or lljson.slencode tight UUIDs.
+Authored by Félix (Coyote.Enthusiast) on 2024-03-17. Released CC-0 2025-08-30. Modified for use in En.
+*/
+string enKey_Decompress22(
+    string b
+)
+{
+    string out;
+    integer i;
+    for (; i < 24; i += 4)
+    {
+        integer x = llBase64ToInteger(llGetSubString(b, i, i+3)) >> 8;
+        out += _enKey_i24ToHex(x);
+    }
+    for (i = 8; i < 24; i += 5)
+        out = llInsertString(out, i, "-");
+    return llGetSubString(out, 0, 35);
 }
