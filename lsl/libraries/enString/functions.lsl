@@ -345,3 +345,35 @@ enString_SlownerSay(
     }
     if (x != i) llOwnerSay(llGetSubString(s, x, -1));
 }
+
+integer enString_IsNumber(
+    string s
+)
+{
+    if (s == "0" || s == "0.0" || s == "0.000000" || (integer)s || (float)s != 0.0) return TRUE;
+    return FALSE;
+}
+
+integer enString_IsVector(
+    string s
+)
+{
+    s = llStringTrim(llReplaceSubString(s, " ", "", 0), STRING_TRIM); // remove all spaces, then trim to clean off any stray newlines
+    if (llGetSubString(s, 0, 0) == "<") s = llDeleteSubString(s, 0, 0);
+    if (llGetSubString(s, -1, -1) == ">") s = llDeleteSubString(s, -1, -1);
+    list l = llParseStringKeepNulls(s, [","], []);
+    if (llGetListLength(l) != 3 || !enString_IsNumber(llList2String(l, 0)) || !enString_IsNumber(llList2String(l, 1)) || !enString_IsNumber(llList2String(l, 2))) return FALSE;
+    return TRUE;
+}
+
+integer enString_IsRotation(
+    string s
+)
+{
+    s = llStringTrim(llReplaceSubString(s, " ", "", 0), STRING_TRIM); // remove all spaces, then trim to clean off any stray newlines
+    if (llGetSubString(s, 0, 0) == "<") s = llDeleteSubString(s, 0, 0);
+    if (llGetSubString(s, -1, -1) == ">") s = llDeleteSubString(s, -1, -1);
+    list l = llParseStringKeepNulls(s, [","], []);
+    if (llGetListLength(l) != 4 || !enString_IsNumber(llList2String(l, 0)) || !enString_IsNumber(llList2String(l, 1)) || !enString_IsNumber(llList2String(l, 2)) || !enString_IsNumber(llList2String(l, 3))) return FALSE;
+    return TRUE;
+}
