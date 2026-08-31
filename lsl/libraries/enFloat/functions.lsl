@@ -23,7 +23,11 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 
-//  rounds a float to a specified number of digits after the decimal
+/*
+Rounds a float to a specified number of digits after the decimal.
+@param f Float to round.
+@param digits Number of digits after the decimal. If -1, trailing zeroes and unnecessary decimals are omitted. If -2, absolute zero is blank.
+*/
 string enFloat_ToString(
     float f,
     integer digits
@@ -32,6 +36,16 @@ string enFloat_ToString(
     if (!digits) return (string)llRound(f); // no digits after decimal, so just round and return
     // we need to manually return only a certain positive number of digits after the decimal
     string s = (string)f;
+    if (digits == -2)
+    { // absolute zero is blank
+        if (f == 0.0) return "";
+    }
+    if (digits < 0)
+    { // variable rounding
+        while (llGetSubString(s, -1, -1) == "0") s = llDeleteSubString(s, -1, -1);
+        if (llGetSubString(s, -1, -1) == ".") s = llDeleteSubString(s, -1, -1);
+        return s;
+    }
     integer i = llSubStringIndex(s, "."); // there are more efficient ways to do this, but whatever
     return llGetSubString(s, 0, i + digits); // return string-cast float, but only up to the number of digits requested
 }
