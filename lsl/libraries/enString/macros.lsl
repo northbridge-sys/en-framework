@@ -29,20 +29,18 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #define FLAG_ENSTRING_ESCAPE_FILTER_JSON 0x2
 #define FLAG_ENSTRING_ESCAPE_REVERSE 0x40000000
 
-#define enString_Elem(s) \
-    enString_Quote(s)
+#define enString_Elem(s) enString_Quote(s)
 
-#define enString_UTF8Bytes(s) \
-    ((llStringLength((string)llParseString2List(llStringToBase64(s), ["="], [])) * 3) >> 2)
+#define enString_UTF8Bytes(s) ((llStringLength((string)llParseString2List(llStringToBase64(s), ["="], [])) * 3) >> 2)
 
-#define enString_EscapedQuote(s) \
-    "\"" + llReplaceSubString(llReplaceSubString(s, "\\", "\\\\", 0), "\"", "\\\"", 0) + "\""
+#define enString_EscapedQuote(s) "\"" + llReplaceSubString(llReplaceSubString(s, "\\", "\\\\", 0), "\"", "\\\"", 0) + "\""
 
-#define enString_Quote(s) \
-    "\"" + s + "\""
+#define enString_Quote(s) "\"" + s + "\""
 
-#define enString_EscapeJsonString(s) \
-    enString_EscapeQuotes(s)
+#define enString_EscapeJsonString(s) enString_EscapeQuotes(s)
 
-#define enString_QuoteJsonString(s) \
-    enString_EscapedQuote(s)
+#define enString_QuoteJsonString(s) enString_EscapedQuote(s)
+
+#define enString_IsKey(s) enKey_Is(s)
+
+#define enString_IsUUID(s) enKey_Is(s)
