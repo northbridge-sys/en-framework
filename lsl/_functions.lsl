@@ -24,6 +24,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #include "northbridge-sys/en-framework/lsl/libraries/enFloat/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enInteger/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enInventory/functions.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries/enJSON/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enKey/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enKVS/functions.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enList/functions.lsl"

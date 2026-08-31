@@ -24,6 +24,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 #include "northbridge-sys/en-framework/lsl/libraries/enFloat/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enInteger/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enInventory/macros.lsl"
+#include "northbridge-sys/en-framework/lsl/libraries/enJSON/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enKey/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enKVS/macros.lsl"
 #include "northbridge-sys/en-framework/lsl/libraries/enList/macros.lsl"
