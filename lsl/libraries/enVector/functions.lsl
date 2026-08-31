@@ -34,7 +34,11 @@ string enVector_ToString(
     return enFloat_ToString(pos.x, digits) + ", " + enFloat_ToString(pos.y, digits) + ", " + enFloat_ToString(pos.z, digits);
 }
 
-//  converts a string to a vector while being a little loose with what counts as a vector (all spaces removed, brackets optional)
+/*
+Converts a string to a vector while being a little loose with what counts as a vector (all spaces removed, brackets optional, zeroes may be blank).
+This accepts the format used by SLua's lljson.slencode tight encoding.
+Note that this does NOT check whether this value is actually safely parsable as a vector. Any failed conversions are zeroed. See enString_IsVector for that.
+*/
 vector enVector_FromString(
     string s
 )

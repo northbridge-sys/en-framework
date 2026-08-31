@@ -79,6 +79,11 @@ rotation enRotation_Decompress(
 }
 
 //  converts a string to a rotation while being a little loose with what counts as a rotation (all spaces removed, brackets optional, automatic translation from vector)
+/*
+Converts a string to a rotation while being a little loose with what counts as a rotation (all spaces removed, brackets optional, zeroes may be blank, vector may be provided instead).
+This accepts the format used by SLua's lljson.slencode tight encoding.
+Note that this does NOT check whether this value is actually safely parsable as a rotation. Any failed conversions are zeroed. See enString_IsRotation for that.
+*/
 rotation enRotation_FromString(
     string s,
     integer use_degrees // set TRUE if you want llEuler2Rot translation to presume a vector in degrees instead of radians
