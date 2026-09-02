@@ -1,6 +1,6 @@
 --[[
 enListen is a general-purpose ll.Listen wrapper. It adds:
-    - Domains (strings that are hashed into a negative chat channel lower than about -1,000,000,000, which avoids conflicts and ensures maximum 1024-byte limit for messages)
+    - Channel Hash Utility Function (CHUF) domains - see https://gsi.sh/rec/chuf
     - Proper error reporting for exceeding limit of 65 listens (the ll.Listen call shouts on DEBUG_CHANNEL even if you catch it with pcall())
     - Built-in same-owner filtering
     - Built-in lljson.sldecode processing and typechecking
