@@ -56,7 +56,8 @@ function enSNEP.Enroll(key: enSNEPTypes.Key): ()
 end
 
 
-function enSNEP.Sign(payload: string, key: enSNEPTypes.Key, hash_algo: string?): enSNEPTypes.Signature
+function enSNEP.Sign(payload: string, key: enSNEPTypes.Key?, hash_algo: string?): enSNEPTypes.Signature
+    assert(key, "enSNEP.Sign called with no key")
     -- add enSNEPTypes signature
     if key.private_key then
         return enSNEPTypes._NewSignature(
