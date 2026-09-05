@@ -18,6 +18,11 @@ local enListen: typeof(require("@en-framework/enListen"))?
 local enSNEP: typeof(require("@en-framework/enSNEP"))
 
 local enCLEP = {
+    _feature = {
+        FILTER_TARGET_REGION = true,
+        FILTER_TARGET_PRIM = true,
+        FILTER_TARGET_SCRIPT = true
+    },
     _link = {
         handlers = {}
     },
@@ -192,6 +197,19 @@ function enCLEP.ListenRemoveChatAll(): ()
     for domain in pairs(enCLEP._chat.handlers) do
         enListen.Close(domain)
         enCLEP._chat.handlers[domain] = nil
+    end
+end
+
+function enCLEP.EnableFilter(
+    filter: string,
+    enable: boolean
+)
+    if filter == "target.region" then
+        enCLEP._feature.FILTER_TARGET_REGION = enable
+    elseif filter == "target.prim" then
+        enCLEP._feature.FILTER_TARGET_PRIM = enable
+    elseif filter == "target.script" then
+        enCLEP._feature.FILTER_TARGET_SCRIPT = enable
     end
 end
 
@@ -410,14 +428,13 @@ function enCLEP._Unmarshal(data: any, source: {prim: uuid, link: number?}): enCL
 
     if payload.source.script == ll.GetScriptName() and source.link == ll.GetLinkNumber() then return end -- heard own message
 
-    -- TODO: add a way to bypass these filters
-    if payload.target.region and payload.target.region ~= ll.GetRegionName() then
+    if enCLEP._feature.FILTER_TARGET_REGION and payload.target.region and payload.target.region ~= ll.GetRegionName() then
         error(`Mismatched CLEP target.region`)
     end
-    if payload.target.prim and payload.target.prim ~= ll.GetKey() then
+    if enCLEP._feature.FILTER_TARGET_PRIM and payload.target.prim and payload.target.prim ~= ll.GetKey() then
         error(`Mismatched CLEP target.prim`)
     end
-    if payload.target.script and payload.target.script ~= ll.GetScriptName() then
+    if enCLEP._feature.FILTER_TARGET_SCRIPT and payload.target.script and payload.target.script ~= ll.GetScriptName() then
         error(`Mismatched CLEP target.script`)
     end
 
