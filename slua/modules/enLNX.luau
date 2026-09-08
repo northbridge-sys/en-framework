@@ -46,16 +46,20 @@ function enLNX.PairToPath(pair: string): {string}
     return path
 end
 
+function enLNX.PathToPair(scope: string, path: {string}, linknum: number?, script: string?): string
+    return enLNX._Header(scope, linknum, script) .. table.concat(path, "\n")
+end
+
 function enLNX.Write(scope: string, path: {string}, data: any?, linknum: number?): boolean
     assert(enLNX._init, `Run enLNX.Init() first`)
     local value = ""
     if data ~= nil then value = lljson.slencode(data) end
-    return ll.LinksetDataWrite(enLNX._Header(scope, linknum) .. table.concat(path, "\n"), value) ~= 0
+    return ll.LinksetDataWrite(enLNX.PathToPair(scope, path, linknum), value) ~= 0
 end
 
 function enLNX.Read(scope: string, path: {string}, linknum: number?, script: string?): any?
     assert(enLNX._init, `Run enLNX.Init() first`)
-    local value = ll.LinksetDataRead(enLNX._Header(scope, linknum, script) .. table.concat(path, "\n"))
+    local value = ll.LinksetDataRead(enLNX.PathToPair(scope, path, linknum, script))
     if value and value ~= "" then
         local success, data = pcall(lljson.sldecode, value)
         if not success then
@@ -79,7 +83,7 @@ end
 
 function enLNX.Delete(scope: string, path: {string}, linknum: number?): boolean
     assert(enLNX._init, `Run enLNX.Init() first`)
-    if ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}$`, "")[1] == 1 then
+    if ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}$`, "")[1] == 1 then
         return true
     end
     return false
@@ -87,7 +91,7 @@ end
 
 function enLNX.DeleteChildren(scope: string, path: {string}, linknum: number?): (number, number)
     assert(enLNX._init, `Run enLNX.Init() first`)
-    local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}\n[^\n]*$`, "")
+    local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}\n[^\n]*$`, "")
     local deleted = tonumber(result[1])
     local denied = tonumber(result[2])
     if not deleted or not denied then return 0, 0 end
@@ -96,33 +100,33 @@ end
 
 function enLNX.DeleteChildrenRecursive(scope: string, path: {string}, linknum: number?): (number, number)
     assert(enLNX._init, `Run enLNX.Init() first`)
-    local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}\n.*$`, "")
+    local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}\n.*$`, "")
     local deleted = tonumber(result[1])
     local denied = tonumber(result[2])
     if not deleted or not denied then return 0, 0 end
     return deleted, denied
 end
 
-function enLNX.Find(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {}
+function enLNX.Find(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {string}
     assert(enLNX._init, `Run enLNX.Init() first`)
-    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}$`, start or 1, count or 0)
+    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}$`, start or 1, count or 0)
 end
 
-function enLNX.FindChildren(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {}
+function enLNX.FindChildren(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {string}
     assert(enLNX._init, `Run enLNX.Init() first`)
-    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}\n[^\n]*$`, start or 1, count or 0)
+    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}\n[^\n]*$`, start or 1, count or 0)
 end
 
-function enLNX.FindChildrenRecursive(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {}
+function enLNX.FindChildrenRecursive(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {string}
     assert(enLNX._init, `Run enLNX.Init() first`)
-    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope, linknum) .. table.concat(path, "\n"))}\n.*$`, start or 1, count or 0)
+    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}\n.*$`, start or 1, count or 0)
 end
 
 function enLNX.Exists(scope: string, path: {string}, linknum: number?): boolean
     return enLNX.Find(scope, path) ~= {}
 end
 
-function enLNX.FindRegex(scope: string, regex: string, start: number?, count: number?, linknum: number?): {}
+function enLNX.FindRegex(scope: string, regex: string, start: number?, count: number?, linknum: number?): {string}
     assert(enLNX._init, `Run enLNX.Init() first`)
     return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope, linknum))}{regex}$`, start or 1, count or 0)
 end
