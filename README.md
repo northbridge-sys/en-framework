@@ -23,8 +23,8 @@ Some of the useful features En provides:
 - enLNX - functions to safely write, read, and manipulate key-value pairs in the `llLinksetData*` store
 - enKVS - simple in-memory key-value store (LSL only)
 - enTimers - `LLTimers` simulacrum for LSL, allowing string callbacks, multiple concurrent timers, and one-shot timers
-- Helper libraries for integers (including hex & bitwise), floats, vectors, rotations, strings, lists, and keys
-- Miscellaneous additional libraries for avatars, environments, inventory, object parameters, and time/dates
+- Helper modules for integers (including hex & bitwise), floats, vectors, rotations, strings, lists, and keys
+- Miscellaneous additional modules for avatars, environments, inventory, object parameters, and time/dates
 - Complete utility scripts
 
 ## Installation
@@ -57,9 +57,9 @@ If you install the official VSCode plugin, make sure to install the additional r
 
 For the viewer and/or VSCode to know where the En Framework (and your other scripts) are loaded, you will need to set the preprocessor include path in both your viewer and the VSCode plugin's configurations; see their respective instructions.
 
-Make sure to enable the "script optimizer" option in your preprocessor(s); En libraries are all loaded together and will crash your compiler if it is not enabled.
+Make sure to enable the "script optimizer" option in your preprocessor(s); En modules are all loaded together and will crash your compiler if it is not enabled.
 
-**Note that there is currently a bug in the VSCode preprocessor that causes it to break on certain libraries; this causes spurious error underlining, but the script can still compile and run.**
+**Note that there is currently a bug in the VSCode preprocessor that causes it to break on certain modules; this causes spurious error underlining, but the script can still compile and run.**
 
 ### SLua Configuration
 
@@ -74,7 +74,7 @@ The general process for setting up script association in VSCode is as follows:
     1. *Use File Meta For Matching*
 1. Create a project folder (see **Include/Require Instructions** below).
 1. In VSCode, create a new workspace by opening that folder in a new window. You can open the folder in an existing workspace, but in-world scripts will only associate to master scripts in the first folder you open in the workspace (you can require ModuleScripts from other folders).
-1. Add any additional folders (typically libraries containing one or more ModuleScripts) into the workspace.
+1. Add any additional folders (typically modules containing one or more ModuleScripts) into the workspace.
 1. In the original folder, create a file ending in “.luau”. It can be in a subdirectory, like “subdirectory/example.luau”. This will be the master script, where you do all editing.
 1. In SL, create a script in an object. There are two ways to associate this script to a master script in VSCode, use only one:
     1. The safest method is to add the line (adapt to your needs): `--@file New Script.luau`  to the top of the script before editing it. This must point to the master file in relation to the original folder and can include subdirectories of your project directory. Don’t include the name of the original folder.
@@ -91,7 +91,7 @@ SLua does not currently support tree-shaking; all code you write or require coun
 
 ## Include/Require Instructions
 
-Unless you have a reason not to, you should store all of your LSL and SLua files somewhere within a unified "include directory" for Second Life scripts on your PC; typically in your Documents or home directory. Your include directory should be set wherever you need an LSL preprocessor include path. (To make it easier to load third-party libraries, we recommend doing this even for SLua, which does not currently support a predefined include path.)
+Unless you have a reason not to, you should store all of your LSL and SLua files somewhere within a unified "include directory" for Second Life scripts on your PC; typically in your Documents or home directory. Your include directory should be set wherever you need an LSL preprocessor include path. (To make it easier to load third-party modules, we recommend doing this even for SLua, which does not currently support a predefined include path.)
 
 Ideally, your include directory should look like this:
 
@@ -106,14 +106,14 @@ Ideally, your include directory should look like this:
         ├── lsl
         │   ├── event-handlers
         │   │   └── ...
-        │   ├── libraries
+        │   ├── modules
         │   │   └── ...
         │   ├── utilities
         │   │   └── ...
         │   ├── \_functions.lsl
         │   ├── \_macros.lsl
         │   ├── event-handlers.lsl
-        │   └── libraries.lsl
+        │   └── modules.lsl
         ├── slua
         │   ├── modules
         │   │   └── ...
@@ -135,10 +135,10 @@ First, `#define` any needed `EVENT_`, `FEATURE_`, `OVERRIDE_`, and `TRACE_` flag
 #define OVERRIDE_ENLOG_DEFAULT_LOGLEVEL 6
 ```
 
-Then, include all LSL libraries (unused code gets removed by the "script optimizer" option):
+Then, include all LSL modules (unused code gets removed by the "script optimizer" option):
 
 ```
-#include "northbridge-sys/en-framework/lsl/libraries.lsl"
+#include "northbridge-sys/en-framework/lsl/modules.lsl"
 ```
 
 Then, write En event passthrough handlers and any other script code:
@@ -206,7 +206,7 @@ The overarching strategy of En is to let scripters focus on the code, not the in
 
 ### How does it work?
 
-For LSL, the LSL Preprocessor makes all of the helper functions defined in the En libraries available within LSL scripts. Since the LSL Preprocessor can automatically remove functions that aren't referenced in the final script, these functions are only compiled into the script if they are called; otherwise, they don't take any script memory. Additionally, the En framework creates and redirects event handlers (`state_entry`, `link_message`, etc.) dynamically based on the functionality you enable to optimize script performance. If you need to handle certain events yourself, En can do so by passing them through to user-defined functions. If an event handler isn't needed for an En feature and you don't specifically request it, it won't be added to the compiled script.
+For LSL, the LSL Preprocessor makes all of the helper functions defined in the En modules available within LSL scripts. Since the LSL Preprocessor can automatically remove functions that aren't referenced in the final script, these functions are only compiled into the script if they are called; otherwise, they don't take any script memory. Additionally, the En framework creates and redirects event handlers (`state_entry`, `link_message`, etc.) dynamically based on the functionality you enable to optimize script performance. If you need to handle certain events yourself, En can do so by passing them through to user-defined functions. If an event handler isn't needed for an En feature and you don't specifically request it, it won't be added to the compiled script.
 
 For SLua, the En framework is only a set of modules; SLua's LLEvents library allows modules to independently hook into events, so no preprocessor is required except to resolve `require()`s.
 

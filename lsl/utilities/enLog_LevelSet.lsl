@@ -37,7 +37,7 @@ Loglevel can be FATAL, ERROR, WARN, INFO, DEBUG, or TRACE.
 
 #define FEATURE_ENPRIM_DISABLE_STOPIFFLAGGED
 
-#include "northbridge-sys/en-framework/lsl/libraries.lsl"
+#include "northbridge-sys/en-framework/lsl/modules.lsl"
 
 setLoglevel()
 {

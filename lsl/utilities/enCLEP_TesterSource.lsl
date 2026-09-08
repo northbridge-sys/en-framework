@@ -9,7 +9,7 @@
 
 #define OVERRIDE_STRING_ENCLEP_LINK_MESSAGE_DOMAIN "CLEP Test Domain"
 
-#include "northbridge-sys/en-framework/lsl/libraries.lsl"
+#include "northbridge-sys/en-framework/lsl/modules.lsl"
 
 list ENRPC_KEYS = [
     "sample-rpc", "foobar"

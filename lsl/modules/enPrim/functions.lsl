@@ -283,7 +283,7 @@ enPrim_UpdateUUIDs()
 		{ // key change
 			_ENPRIM_UUIDS_SELF = llList2List([(string)llGetKey()] + _ENPRIM_UUIDS_SELF, 0, OVERRIDE_ENPRIM_LIMIT_GETMYLAST);
 
-            // "hooks" to other En libraries that rely on UUID monitoring
+            // "hooks" to other En modules that rely on UUID monitoring
             _enLNX_uuid_changed(record_key);
             _enCLEP_uuid_changed(record_key);
 

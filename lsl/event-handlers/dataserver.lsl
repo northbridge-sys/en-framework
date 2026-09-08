@@ -26,7 +26,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
             enLog_TraceParams( "dataserver", [ "query", "data" ], [ enString_Elem( query ), enString_Elem( data ) ] );
         #endif
 
-        // check if any En libraries want to intercept this event
+        // check if any En modules want to intercept this event
         #if defined FEATURE_ENINVENTORY_ENABLE_NC
             if (enInventory_NCParse(query, data)) return;
         #endif

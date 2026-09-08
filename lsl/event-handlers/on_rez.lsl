@@ -17,7 +17,7 @@ with this script.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 /*
-we always have an on_rez(), so there's no need to do _EVENT or _HOOK definitions - let the individual libraries handle everything
+we always have an on_rez(), so there's no need to do _EVENT or _HOOK definitions - let the individual modules handle everything
 */
 on_rez(integer param)
 {

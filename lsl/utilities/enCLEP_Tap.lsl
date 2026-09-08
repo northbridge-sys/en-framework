@@ -33,7 +33,7 @@ this prim.
 
 #define TRACE_EVENT_ENCLEP_MESSAGE
 
-#include "northbridge-sys/en-framework/lsl/libraries.lsl"
+#include "northbridge-sys/en-framework/lsl/modules.lsl"
 
 default
 {
