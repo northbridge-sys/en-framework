@@ -12,10 +12,9 @@ local enSNEPTypes = require("@en-framework/types/enSNEPTypes")
 
 local enCHUF = require("@en-framework/enCHUF")
 
-local enConsole: typeof(require("@en-framework/enConsole"))
-local enDump: typeof(require("@en-framework/enDump")) -- only required if verbose logging is enabled and inbound event logging is desired
+local enDump: typeof(require("@en-framework/enDump"))? -- only required if verbose logging is enabled and inbound event logging is desired
 local enListen: typeof(require("@en-framework/enListen"))?
-local enSNEP: typeof(require("@en-framework/enSNEP"))
+local enSNEP: typeof(require("@en-framework/enSNEP"))?
 
 local enCLEP = {
     _feature = {
@@ -29,38 +28,75 @@ local enCLEP = {
     _chat = {
         handlers = {}
     },
+    _callbacks = {
+        log = nil :: (level: number, message: string) -> ()?
+    },
     _verbose = false,
     _initstring = "Call enCLEP.Init(...) first",
     _init = false
 }
 enCLEP.__index = enCLEP
 
+function enCLEP._Log(level: number, message: string)
+    if enCLEP._callbacks.log then
+        enCLEP._callbacks.log(level, message)
+    end
+end
+
+function enCLEP._Print(message: string)
+    enCLEP._Log(0, message)
+end
+
+function enCLEP._Fatal(message: string)
+    enCLEP._Log(1, message)
+end
+
+function enCLEP._Error(message: string)
+    enCLEP._Log(2, message)
+end
+
+function enCLEP._Warn(message: string)
+    enCLEP._Log(3, message)
+end
+
+function enCLEP._Info(message: string)
+    enCLEP._Log(4, message)
+end
+
+function enCLEP._Debug(message: string)
+    enCLEP._Log(5, message)
+end
+
+function enCLEP._Trace(message: string)
+    enCLEP._Log(6, message)
+end
+
 --[[
 Initializes enCLEP. Required on script start.
-@param _enConsole enConsole
 @param _enListen Optional: enListen (only required for chat operations)
+@param _enSNEP: Optional: enSNEP (only required for SNEP signing/validation)
+@param callback_log Optional: Function to call when a message has been logged (typically you'd pass enConsole.Log here)
 @param verbose_logging Optional: Whether to enable verbose trace logs for deep debugging
 @param _enDump: Optional: enDump (only required for enListen event verbose logging)
-@param _enSNEP: Optional: enSNEP (only required for SNEP signing/validation)
 ]]
 function enCLEP.Init(
-    _enConsole: typeof(enConsole),
     _enListen: typeof(enListen)?,
+    _enSNEP: typeof(enSNEP)?,
+    callback_log: typeof(enCLEP._callbacks.log),
     verbose_logging: boolean?,
-    _enDump: typeof(enDump)?,
-    _enSNEP: typeof(enSNEP)?): ()
-    enConsole = _enConsole
+    _enDump: typeof(enDump)?): ()
+    enDump = _enDump
     enListen = _enListen
-    if _enDump then enDump = _enDump end
-    if _enSNEP then enSNEP = _enSNEP end
+    enSNEP = _enSNEP
+    enCLEP._callbacks.log = callback_log
     enCLEP._verbose = verbose_logging or false
     enCLEP._init = true
-    enConsole.Trace(`enCLEP initialized`)
+    enCLEP._Trace(`enCLEP initialized`)
 end
 
 function enCLEP._link_message(linknum: number, num: number, message: string, key: uuid|string): any?
 
-    if enCLEP._verbose then enConsole.Trace(`enCLEP._link_message({linknum}, {num}, "{message}", "{key}") ➔ ...`) end
+    if enCLEP._verbose then enCLEP._Trace(`enCLEP._link_message({linknum}, {num}, "{message}", "{key}") ➔ ...`) end
 
     -- for link messages, they are passed in raw, so we have to decode them ourselves first
     local success_json, data = pcall(lljson.sldecode, message)
@@ -69,7 +105,7 @@ function enCLEP._link_message(linknum: number, num: number, message: string, key
 
     local success, clep = pcall(enCLEP._Unmarshal, data, {prim = ll.GetLinkKey(linknum), link = linknum})
     if not success then
-        if enCLEP._verbose then enConsole.Trace(`Dropped CLEP message from link {linknum}: {clep}`) end
+        if enCLEP._verbose then enCLEP._Trace(`Dropped CLEP message from link {linknum}: {clep}`) end
         return 0x12
     end
 
@@ -84,12 +120,12 @@ end
 
 function enCLEP._listen(domain: string | number, name: string, key: uuid, data: any): any?
     
-    if enCLEP._verbose and enDump then enConsole.Trace(`enCLEP._listen("{domain}", "{name}", "{key}", {enDump.Table(data)}) ➔ ...`) end
+    if enCLEP._verbose and enDump then enCLEP._Trace(`enCLEP._listen("{domain}", "{name}", "{key}", {enDump.Table(data)}) ➔ ...`) end
 
     -- for listens, enListen does the json decode and passes a raw data value, so we can skip the decode here
     local success, clep = pcall(enCLEP._Unmarshal, data, {prim = key})
     if not success then
-        if enCLEP._verbose then enConsole.Trace(`Dropped CLEP message from {key}: {clep}`) end
+        if enCLEP._verbose then enCLEP._Trace(`Dropped CLEP message from {key}: {clep}`) end
         return 0x10
     end
 
@@ -109,7 +145,7 @@ Starts listening to a CLEP domain via link_message.
 ]]
 function enCLEP.ListenLink(domain: string, handler_function: (clep: enCLEPTypes.Message) -> ()): ()
     assert(enCLEP._init, enCLEP._initstring)
-    enConsole.Trace(`enCLEP.ListenLink("{domain}", ...)`)
+    enCLEP._Trace(`enCLEP.ListenLink("{domain}", ...)`)
 
     if enCLEP._link.handlers[domain] then
         -- update existing handler
@@ -137,7 +173,7 @@ function enCLEP.ListenChat(domain: string, owner_only: boolean, handler_function
     enListen.Open(enCLEP._listen, owner_only, domain, nil, source_uuid, nil, "table")
     enCLEP._chat.handlers[domain] = handler_function
 
-    enConsole.Trace(`enCLEP.ListenChat("{domain}" ({enCHUF.Channel(domain)}), {owner_only}, ...)`)
+    enCLEP._Trace(`enCLEP.ListenChat("{domain}" ({enCHUF.Channel(domain)}), {owner_only}, ...)`)
 end
 
 --[[
@@ -148,7 +184,7 @@ function enCLEP.ListenRemoveLink(domain: string): ()
     assert(enCLEP._init, enCLEP._initstring)
     assert(enCLEP._link.handlers[domain], `Domain not found: {domain}`)
 
-    enConsole.Trace(`enCLEP.ListenRemoveLink("{domain}")`)
+    enCLEP._Trace(`enCLEP.ListenRemoveLink("{domain}")`)
 
     enCLEP._link.handlers[domain] = nil
 
@@ -167,7 +203,7 @@ function enCLEP.ListenRemoveChat(domain: string): ()
     assert(enListen, "enListen not initialized")
     assert(enCLEP._chat.handlers[domain], `Domain not found: {domain}`)
 
-    enConsole.Trace(`enCLEP.ListenRemoveChat("{domain}")`)
+    enCLEP._Trace(`enCLEP.ListenRemoveChat("{domain}")`)
 
     enListen.Close(domain)
 
@@ -308,7 +344,7 @@ function enCLEP.Send(
         or (target.prim and target.prim == ll.GetKey())
     ) then
         enCLEP._link_message(ll.GetLinkNumber(), 0, lljson.slencode(output, {tight = true}), NULL_KEY) -- pass it back in as if it were received as a link_message
-        if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ enCLEP._link_message(...) (loopback)`) end
+        if enCLEP._verbose then enCLEP._Trace(`{func_trace} ➔ enCLEP._link_message(...) (loopback)`) end
         return payload.id
     end
 
@@ -318,12 +354,12 @@ function enCLEP.Send(
         if target.force_chat then
             -- use RegionSayTo
             ll.RegionSayTo(ll.GetLinkKey(target.link), channel, lljson.slencode(output, {tight = true}))
-            if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ ll.RegionSayTo({ll.GetLinkKey(target.link)}, {channel}, ...) (forced from link {target.link})`) end
+            if enCLEP._verbose then enCLEP._Trace(`{func_trace} ➔ ll.RegionSayTo({ll.GetLinkKey(target.link)}, {channel}, ...) (forced from link {target.link})`) end
             return payload.id
         else
             -- use MessageLinked
             ll.MessageLinked(target.link, 0, lljson.slencode(output, {tight = true}), uuid(NULL_KEY) :: uuid)
-            if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ ll.MessageLinked({target.link}, ...)`) end
+            if enCLEP._verbose then enCLEP._Trace(`{func_trace} ➔ ll.MessageLinked({target.link}, ...)`) end
             return payload.id
         end
     end
@@ -339,19 +375,19 @@ function enCLEP.Send(
                 -- use MessageLinked instead of RegionSayTo, since it's faster and RST fails on same-prim messages
                 -- if you want to not use link messages at all between prims, force chat for other prims in the same linkset (not same prim) using target.force_chat = true
                 ll.MessageLinked(link, 0, lljson.slencode(output, {tight = true}), uuid(NULL_KEY) :: uuid)
-                if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ ll.MessageLinked({link}, ...)`) end
+                if enCLEP._verbose then enCLEP._Trace(`{func_trace} ➔ ll.MessageLinked({link}, ...)`) end
                 return payload.id
             end
             -- prim is in some other linkset in the region
             -- use RegionSayTo
             ll.RegionSayTo(target.prim, channel, lljson.slencode(output, {tight = true}))
-            if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ ll.RegionSayTo({target.prim}, {channel}, ...)`) end
+            if enCLEP._verbose then enCLEP._Trace(`{func_trace} ➔ ll.RegionSayTo({target.prim}, {channel}, ...)`) end
             return payload.id
         end
         -- prim does not exist in this region
         -- use Shout (can cross region border up to 100m)
         ll.Shout(channel, lljson.slencode(output, {tight = true}))
-        if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ ll.Shout({channel}, ...)`) end
+        if enCLEP._verbose then enCLEP._Trace(`{func_trace} ➔ ll.Shout({channel}, ...)`) end
         return payload.id
     end
 
@@ -359,7 +395,7 @@ function enCLEP.Send(
     -- broadcast to all prims in the region
     -- use RegionSay
     ll.RegionSay(channel, lljson.slencode(output, {tight = true}))
-    if enCLEP._verbose then enConsole.Trace(`{func_trace} ➔ ll.RegionSay({channel}, ...)`) end
+    if enCLEP._verbose then enCLEP._Trace(`{func_trace} ➔ ll.RegionSay({channel}, ...)`) end
     return payload.id
 end
 
