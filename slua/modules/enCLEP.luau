@@ -261,7 +261,7 @@ Sends a message via CLEP, either via chat or link message, depending on target.
 @return Message UUID used for outbound message (can be awaited, though there is no guarantee of a response)
 ]]
 function enCLEP.Send(
-    key: enSNEPTypes.Key?,
+    key: enSNEPTypes.RSAKeyPair|enSNEPTypes.HMACKey?,
     target: {
         region: string?,
         prim: uuid?,
@@ -305,13 +305,17 @@ function enCLEP.Send(
     }
 
     if key then
-        output.snep = enSNEP.Sign(output.payload, key)
+        if key.sym then
+            output.snep = enSNEPTypes.SignHMAC(key :: enSNEPTypes.HMACKey, output.payload)
+        else
+            output.snep = enSNEPTypes.SignRSA(key :: enSNEPTypes.RSAKeyPair, output.payload)
+        end
     else
         -- if we're not using a SNEP signature, add the optional CLEP-level utime value
         output.utime = os.time()
     end
 
-    local channel = enCHUF.Channel(payload.domain);
+    local channel = enCHUF.Channel(payload.domain)
 
     --[[
     Possible target configurations:

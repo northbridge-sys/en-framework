@@ -36,9 +36,9 @@ function enSNEP.Verify(payload: string, snep: enSNEPTypes.Signature, payload_uti
         -- either the signature was invalid, our public key is wrong, or the signature is older than seconds_to_check
         error(`Failed to verify RSA signature for {snep.key_name}`)
     elseif snep.sign_algo == "HMAC" then
-        assert(enSNEP._keys[snep.key_name].shared_key, `Failed to get shared key for {snep.key_name}`)
+        assert(enSNEP._keys[snep.key_name].secret, `Failed to get secret for {snep.key_name}`)
         while seconds_remaining > 0 do
-            if ll.HMAC(enSNEP._keys[snep.key_name].shared_key, tostring(utime - (seconds_to_check - seconds_remaining)) .. payload, snep.hash_algo) then
+            if ll.HMAC(enSNEP._keys[snep.key_name].secret, tostring(utime - (seconds_to_check - seconds_remaining)) .. payload, snep.hash_algo) then
                 -- signature verified succesfully and is, at most, seconds_to_check old
                 return {key_name = snep.key_name, sign_algo = "HMAC", hash_algo = snep.hash_algo}
             end
@@ -51,31 +51,8 @@ function enSNEP.Verify(payload: string, snep: enSNEPTypes.Signature, payload_uti
     end
 end
 
-function enSNEP.Enroll(key: enSNEPTypes.Key): ()
+function enSNEP.Enroll(key: enSNEPTypes.HMACKey|enSNEPTypes.RSAKeyPair|enSNEPTypes.RSAPublicKey): ()
     enSNEP._keys[key.key_name] = key
-end
-
-
-function enSNEP.Sign(payload: string, key: enSNEPTypes.Key?, hash_algo: string?): enSNEPTypes.Signature
-    assert(key, "enSNEP.Sign called with no key")
-    -- add enSNEPTypes signature
-    if key.private_key then
-        return enSNEPTypes._NewSignature(
-            "RSA",
-            hash_algo or "sha256",
-            key,
-            payload
-        )
-    elseif key.shared_key then
-        return enSNEPTypes._NewSignature(
-            "HMAC",
-            hash_algo or "sha256",
-            key,
-            payload
-        )
-    else
-        error(`Invalid enSNEPTypes key`)
-    end
 end
 
 return enSNEP

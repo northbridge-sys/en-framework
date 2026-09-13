@@ -7,48 +7,77 @@ Type definitions for enSNEP keys and signatures.
 local enSNEPTypes = {}
 enSNEPTypes.__index = enSNEPTypes
 
-type KeyType = {
+type HMACKeyStruct = {
+    sym: boolean,
     key_name: string,
-    shared_key: string?, -- only required for HMAC
-    public_key: string?, -- only required for RSA validation
-    private_key: string?, -- only required for RSA signing
+    secret: string
 }
-export type Key = typeof(setmetatable({} :: KeyType, enSNEPTypes))
+export type HMACKey = typeof(setmetatable({} :: HMACKeyStruct, enSNEPTypes))
 
-type SignatureType = {
+type RSAKeyPairStruct = {
+    sym: boolean,
+    key_name: string,
+    public_key: string?,
+    private_key: string
+}
+export type RSAKeyPair = typeof(setmetatable({} :: RSAKeyPairStruct, enSNEPTypes))
+
+type RSAPublicKeyStruct = {
+    key_name: string,
+    public_key: string
+}
+export type RSAPublicKey = typeof(setmetatable({} :: RSAPublicKeyStruct, enSNEPTypes))
+
+type SignatureStruct = {
     sign_algo: string,
     hash_algo: string,
     key_name: string,
     signature: string
 }
-export type Signature = typeof(setmetatable({} :: SignatureType, enSNEPTypes))
+export type Signature = typeof(setmetatable({} :: SignatureStruct, enSNEPTypes))
 
-function enSNEPTypes.NewRSA(key_name: string, public_key: string?, private_key: string?): Key
+function enSNEPTypes.NewHMACKey(key_name: string, secret: string): HMACKey
     local self = {}
+    self.sym = true
+    self.key_name = key_name
+    self.secret = secret
+    return setmetatable(self, enSNEPTypes)
+end
+
+function enSNEPTypes.NewRSAKeyPair(key_name: string, private_key: string, public_key: string?): RSAKeyPair
+    local self = {}
+    self.sym = false
     self.key_name = key_name
     self.public_key = public_key
     self.private_key = private_key
     return setmetatable(self, enSNEPTypes)
 end
 
-function enSNEPTypes.NewHMAC(key_name: string, shared_key: string): Key
+function enSNEPTypes.NewRSAPublicKey(key_name: string, public_key: string): RSAPublicKey
     local self = {}
+    self.sym = false
     self.key_name = key_name
-    self.shared_key = shared_key
+    self.public_key = public_key
     return setmetatable(self, enSNEPTypes)
 end
 
-function enSNEPTypes._NewSignature(sign_algo: string, hash_algo: string, key: Key, payload: string): Signature
+function enSNEPTypes.SignHMAC(key: HMACKey, payload: string, hash_algo: string?): Signature
     local self = {}
-    self.sign_algo = sign_algo
-    self.hash_algo = hash_algo
+    self.sign_algo = "HMAC"
+    self.hash_algo = hash_algo or "sha256"
     self.key_name = key.key_name
     local utime = os.time()
-    if self.sign_algo == "RSA" then
-        self.signature = ll.SignRSA(key.private_key :: string, tostring(utime) .. payload, hash_algo)
-    else
-        self.signature = ll.HMAC(key.shared_key :: string, tostring(utime) .. payload, hash_algo)
-    end
+    self.signature = ll.HMAC(key.secret :: string, tostring(utime) .. payload, hash_algo)
+    return setmetatable(self, enSNEPTypes)
+end
+
+function enSNEPTypes.SignRSA(key: RSAKeyPair, payload: string, hash_algo: string?): Signature
+    local self = {}
+    self.sign_algo = "RSA"
+    self.hash_algo = hash_algo or "sha256"
+    self.key_name = key.key_name
+    local utime = os.time()
+    self.signature = ll.SignRSA(key.private_key :: string, tostring(utime) .. payload, hash_algo)
     return setmetatable(self, enSNEPTypes)
 end
 
