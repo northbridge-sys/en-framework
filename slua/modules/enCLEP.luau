@@ -411,7 +411,7 @@ Responds to a message via CLEP, either via chat or link message, depending on th
 @return Message UUID used for outbound message (can generally be ignored)
 ]]
 function enCLEP.Respond(
-    key: enSNEPTypes.Key?,
+    key: enSNEPTypes.RSAKeyPair|enSNEPTypes.HMACKey?,
     clep: enCLEPTypes.Message?,
     result: any
 ): uuid
@@ -477,16 +477,18 @@ function enCLEP._Unmarshal(data: any, source: {prim: uuid, link: number?}): enCL
     if enCLEP._feature.FILTER_TARGET_SCRIPT and payload.target.script and payload.target.script ~= ll.GetScriptName() then
         error(`Mismatched CLEP target.script`)
     end
-
+    
     local metadata = {source = source}
 
     if data.snep and enSNEP then
         -- we have a signature to validate
-        local verification = enSNEP.Verify(data.payload, data.snep, payload.utime, 10) -- TODO: allow modification of stale_seconds
-        if verification then -- signature verified successfully
+        local success, verification = pcall(enSNEP.Verify, data.payload, data.snep, payload.utime, 10) -- TODO: allow modification of stale_seconds
+        if success and verification then -- signature verified successfully
             metadata.key_name = verification.key_name
             metadata.hash_algo = verification.hash_algo
             metadata.sign_algo = verification.sign_algo
+        elseif not success then
+            metadata.key_error = verification
         end
     end
 
