@@ -67,7 +67,7 @@ function enSNEPTypes.SignHMAC(key: HMACKey, payload: string, hash_algo: string?)
     self.hash_algo = hash_algo or "sha256"
     self.key_name = key.key_name
     local utime = os.time()
-    self.signature = ll.HMAC(key.secret :: string, tostring(utime) .. payload, hash_algo)
+    self.signature = ll.HMAC(key.secret :: string, tostring(utime) .. payload, self.hash_algo)
     return setmetatable(self, enSNEPTypes)
 end
 
@@ -77,7 +77,7 @@ function enSNEPTypes.SignRSA(key: RSAKeyPair, payload: string, hash_algo: string
     self.hash_algo = hash_algo or "sha256"
     self.key_name = key.key_name
     local utime = os.time()
-    self.signature = ll.SignRSA(key.private_key :: string, tostring(utime) .. payload, hash_algo)
+    self.signature = ll.SignRSA(key.private_key :: string, tostring(utime) .. payload, self.hash_algo)
     return setmetatable(self, enSNEPTypes)
 end
 
