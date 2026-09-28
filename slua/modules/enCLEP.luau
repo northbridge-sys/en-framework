@@ -98,12 +98,7 @@ function enCLEP._link_message(linknum: number, num: number, message: string, key
 
     if enCLEP._verbose then enCLEP._Trace(`enCLEP._link_message({linknum}, {num}, "{message}", "{key}") ➔ ...`) end
 
-    -- for link messages, they are passed in raw, so we have to decode them ourselves first
-    local success_json, data = pcall(lljson.sldecode, message)
-    if not success_json then return 0x10 end
-    if typeof(data) ~= "table" then return 0x11 end
-
-    local success, clep = pcall(enCLEP._Unmarshal, data, {prim = ll.GetLinkKey(linknum), link = linknum})
+    local success, clep = pcall(enCLEP._Unmarshal, message, {prim = ll.GetLinkKey(linknum), link = linknum})
     if not success then
         if enCLEP._verbose then enCLEP._Trace(`Dropped CLEP message from link {linknum}: {clep}`) end
         return 0x12
@@ -170,7 +165,7 @@ Starts listening to a CLEP domain via chat listen.
 function enCLEP.ListenChat(domain: string, owner_only: boolean, handler_function: (clep: enCLEPTypes.Message) -> (), source_uuid: uuid?): ()
     assert(enCLEP._init, enCLEP._initstring)
     assert(enListen, "enListen not initialized")
-    enListen.Open(enCLEP._listen, owner_only, domain, nil, source_uuid, nil, "table")
+    enListen.Open(enCLEP._listen, owner_only, domain, nil, source_uuid)
     enCLEP._chat.handlers[domain] = handler_function
 
     enCLEP._Trace(`enCLEP.ListenChat("{domain}" ({enCHUF.Channel(domain)}), {owner_only}, ...)`)
@@ -274,7 +269,8 @@ function enCLEP.Send(
     method: {string},
     params: any?,
     id: uuid?,
-    result: any?
+    result: any?,
+    headers: {[string]: string}?
 ): uuid
     if target.prim == NULL_KEY then
         target.prim = nil -- do not allow passing NULL_KEY as target_prim, because it will not be accepted by anyone
@@ -304,6 +300,7 @@ function enCLEP.Send(
         payload = lljson.slencode(payload, {tight = true})
     }
 
+    -- TODO: redo these
     if key then
         if key.sym then
             output.snep = enSNEPTypes.SignHMAC(key :: enSNEPTypes.HMACKey, output.payload)
@@ -431,42 +428,107 @@ function enCLEP._MissingElement(path: string, required: string, got: string): ()
     error(`Missing CLEP element {path} as {required} (got {got})`)
 end
 
-function enCLEP._Unmarshal(data: any, source: {prim: uuid, link: number?}): enCLEPTypes.Message?
+function enCLEP._Unmarshal(message: any, source: {prim: uuid, link: number?}): enCLEPTypes.Message?
 
-    local data_payload
-    if data.payload then -- payload is encapsulated - we use slencode specifically for the payload
-        data_payload = lljson.sldecode(data.payload)
-    else -- payload is not encapsulated
-        data_payload = data
+    -- Inbound message should be a raw string
+    if typeof(message) ~= "string" then return nil end
+    -- for link messages, they are passed in raw, so we have to decode them ourselves first
+    local headers = {}
+    local payload_raw = nil :: string?
+    local payload = nil :: {
+        utime: number,
+        source: {
+            region: string,
+            prim: uuid,
+            script: string
+        },
+        target: {
+            link: number?,
+            region: string?,
+            prim: uuid?,
+            script: string?
+        },
+        domain: string,
+        id: uuid,
+        method: {string},
+        params: any?,
+        result: any?
+    }?
+    local sol = 1
+    local newline_index = string.find(message, "\n", sol, true)
+    local eol = newline_index or #message
+    while sol <= #message do
+        if string.sub(message, sol, sol) ~= "{" then
+            -- this segment of the message is a header line
+            local colon_index = string.find(message, ":", sol, true)
+            if colon_index == nil then
+                enCLEP._Trace(`Received CLEP message with malformatted header: {string.sub(message, sol, eol)}`)
+            else
+                headers[string.sub(message, sol, colon_index - 1)] = string.sub(message, colon_index + 1, eol)
+            end
+            sol = eol + 1
+            newline_index = string.find(message, "\n", sol, true)
+            eol = newline_index or #message
+        else
+            -- remaining message should be payload
+            payload_raw = string.sub(message, sol)
+            if not payload_raw then return nil end
+            local success
+            success, payload = pcall(lljson.sldecode, payload_raw)
+            if not success then return nil end
+            if typeof(payload) ~= "table" then return nil end
+            break
+        end
     end
+
+    if payload == nil or payload_raw == nil then return nil end
 
     --[[
     Check types of all required payload values.
     We check uuids as optionally strings because while enCLEP.Send uses lljson.slencode, the CLEP spec supports lljson.encode as well, which leaves uuids as plain JSON strings.
     ]]
-    if typeof(data_payload.utime) ~= "number" then enCLEP._MissingElement("utime", "number", typeof(data_payload.utime)) end
-    if typeof(data_payload.source.region) ~= "string" then enCLEP._MissingElement("source.region", "string", typeof(data_payload.source.region)) end
-    if typeof(data_payload.source.prim) ~= "uuid" and typeof(data_payload.source.prim) ~= "string" then enCLEP._MissingElement("source.prim", "uuid", typeof(data_payload.source.prim)) end
-    if typeof(data_payload.source.script) ~= "string" then enCLEP._MissingElement("source.script", "string", typeof(data_payload.source.script)) end
-    if typeof(data_payload.target) ~= "table" then enCLEP._MissingElement("target", "table", typeof(data_payload.target)) end
-    if typeof(data_payload.domain) ~= "string" then enCLEP._MissingElement("domain", "string", typeof(data_payload.domain)) end
-    if typeof(data_payload.id) ~= "uuid" and typeof(data_payload.id) ~= "string" then enCLEP._MissingElement("id", "uuid", typeof(data_payload.id)) end
+    if typeof(payload.utime) ~= "number" then
+        enCLEP._MissingElement("utime", "number", typeof(payload.utime))
+    end
+    if typeof(payload.source.region) ~= "string" then
+        enCLEP._MissingElement("source.region", "string", typeof(payload.source.region))
+    end
+    if typeof(payload.source.prim) ~= "uuid" and typeof(payload.source.prim) ~= "string" then
+        enCLEP._MissingElement("source.prim", "uuid", typeof(payload.source.prim))
+    end
+    if typeof(payload.source.script) ~= "string" then
+        enCLEP._MissingElement("source.script", "string", typeof(payload.source.script))
+    end
+    if typeof(payload.target) ~= "table" then
+        enCLEP._MissingElement("target", "table", typeof(payload.target))
+    end
+    if typeof(payload.domain) ~= "string" then
+        enCLEP._MissingElement("domain", "string", typeof(payload.domain))
+    end
+    if typeof(payload.id) ~= "uuid" and typeof(payload.id) ~= "string" then
+        enCLEP._MissingElement("id", "uuid", typeof(payload.id))
+    end
 
-    local payload = {
-        utime = data_payload.utime,
-        source = data_payload.source,
-        target = data_payload.target,
-        domain = data_payload.domain,
-        id = touuid(data_payload.id) or NULL_KEY,
-        method = data_payload.method,
-        params = data_payload.params,
-        result = data_payload.result
+    -- reset payload variable to fix id type
+    payload = {
+        utime = payload.utime,
+        source = payload.source,
+        target = payload.target,
+        domain = payload.domain,
+        id = touuid(payload.id) or NULL_KEY,
+        method = payload.method,
+        params = payload.params,
+        result = payload.result
     }
 
-    if payload.source.prim then payload.source.prim = touuid(payload.source.prim) or NULL_KEY end -- convert source.prim back to uuid for type safety
-    if payload.target.prim then payload.target.prim = touuid(payload.target.prim) or NULL_KEY end -- convert target.prim back to uuid for type safety
+    if payload.source.prim then
+        payload.source.prim = touuid(payload.source.prim) or NULL_KEY -- convert source.prim back to uuid for type safety
+    end
+    if payload.target.prim then
+        payload.target.prim = touuid(payload.target.prim) or NULL_KEY -- convert target.prim back to uuid for type safety
+    end
 
-    if payload.source.script == ll.GetScriptName() and source.link == ll.GetLinkNumber() then return end -- heard own message
+    if payload.source.script == ll.GetScriptName() and source.link == ll.GetLinkNumber() then return nil end -- heard own message
 
     if enCLEP._feature.FILTER_TARGET_REGION and payload.target.region and payload.target.region ~= ll.GetRegionName() then
         error(`Mismatched CLEP target.region`)
@@ -480,9 +542,9 @@ function enCLEP._Unmarshal(data: any, source: {prim: uuid, link: number?}): enCL
     
     local metadata = {source = source}
 
-    if data.snep and enSNEP then
+    if headers.snep and enSNEP then
         -- we have a signature to validate
-        local success, verification = pcall(enSNEP.Verify, data.payload, data.snep, payload.utime, 10) -- TODO: allow modification of stale_seconds
+        local success, verification = pcall(enSNEP.Verify, payload_raw :: string, headers.SNEP)
         if success and verification then -- signature verified successfully
             metadata.key_name = verification.key_name
             metadata.hash_algo = verification.hash_algo
@@ -492,7 +554,7 @@ function enCLEP._Unmarshal(data: any, source: {prim: uuid, link: number?}): enCL
         end
     end
 
-    return enCLEPTypes.NewMessage({metadata = metadata, payload = payload} :: any)
+    return enCLEPTypes.NewMessage({metadata = metadata, headers = headers, payload = payload} :: any)
 end
 
 return enCLEP

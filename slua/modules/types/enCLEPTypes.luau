@@ -18,6 +18,7 @@ type self = {
         hash_algo: string?,
         sign_algo: string?
     },
+    headers: {[string]: string},
     payload: {
         utime: number,
         source: {
