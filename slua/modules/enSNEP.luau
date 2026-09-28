@@ -16,38 +16,77 @@ Prevent replay attacks completely by doing ONE of the following:
     - Check that metadata.source.prim matches payload.source.prim - eliminates source spoofing, but can't be used with relayed traffic.
 ]]
 
-function enSNEP.Verify(payload: string, snep: enSNEPTypes.Signature, payload_utime: number?, stale_seconds: number?): {key_name: string, sign_algo: string, hash_algo: string}?
-    local seconds_to_check = stale_seconds or 1
-    if seconds_to_check < 1 then seconds_to_check = 1 end
-    local seconds_remaining = seconds_to_check
+function enSNEP.GenerateTokenHMAC(
+    payload_raw: string,
+    hmac_key: enSNEPTypes.HMACKey,
+    expiry_seconds: number?,
+    hash_algo: "md5"|"sha1"|"sha224"|"sha256"|"sha384"|"sha512"?
+): string
+    local utime = os.time()
+    return lljson.encode({
+        sa = "HMAC", -- sign algo
+        ha = hash_algo or "sha256",
+        kn = hmac_key.key_name,
+        e = utime + (expiry_seconds or 60),
+        s = ll.HMAC(hmac_key.secret :: string, tostring(utime + (expiry_seconds or 60)) .. payload_raw, hash_algo or "sha256"),
+        snep = 1 -- SNEP v1
+    })
+end
+
+function enSNEP.GenerateTokenRSA(
+    payload_raw: string,
+    rsa_key_pair: enSNEPTypes.RSAKeyPair,
+    expiry_seconds: number?,
+    hash_algo: "sha1"|"sha224"|"sha256"|"sha384"|"sha512"?
+): string
+    local utime = os.time()
+    return lljson.encode({
+        sa = "RSA", -- sign algo
+        ha = hash_algo or "sha256",
+        kn = rsa_key_pair.key_name,
+        e = utime + (expiry_seconds or 60),
+        s = ll.SignRSA(rsa_key_pair.private_key :: string, tostring(utime + (expiry_seconds or 60)) .. payload_raw, hash_algo or "sha256"),
+        snep = 1 -- SNEP v1
+    })
+end
+
+function enSNEP.Verify(
+    payload_raw: string,
+    snep_token: string
+): {
+    key_name: string,
+    sign_algo: string,
+    hash_algo: string
+}?
     local utime = os.time() :: number
 
-    assert(enSNEP._keys[snep.key_name], `Unknown signature key_name: {snep.key_name}`)
-    if snep.sign_algo == "RSA" then
-        assert(enSNEP._keys[snep.key_name].public_key, `Failed to get public key for {snep.key_name}`)
-        while seconds_remaining > 0 do
-            if ll.VerifyRSA(enSNEP._keys[snep.key_name].public_key, tostring(utime - (seconds_to_check - seconds_remaining)) .. payload, snep.signature, snep.hash_algo) then
-                -- signature verified succesfully and is, at most, seconds_to_check old
-                assert(not payload_utime or payload_utime == utime - (seconds_to_check - seconds_remaining), `Payload utime {payload_utime} does not match signature utime {utime - (seconds_to_check - seconds_remaining)}`)
-                return {key_name = snep.key_name, sign_algo = "RSA", hash_algo = snep.hash_algo}
-            end
-            seconds_remaining -= 1
+    local success, snep_token_data = pcall(lljson.decode(snep_token))
+    if not success or not snep_token_data then
+        error(`Failed to decode token`)
+    end
+    if utime > snep_token_data.e then
+        error(`Token expired`)
+    end
+
+    assert(enSNEP._keys[snep_token_data.kn], `Unknown signature key_name: {snep_token_data.kn}`)
+    if snep_token_data.sa == "RSA" then
+        assert(enSNEP._keys[snep_token_data.kn].public_key, `Failed to get public key for {snep_token_data.kn}`)
+        if ll.VerifyRSA(enSNEP._keys[snep_token_data.kn].public_key, tostring(snep_token_data.e) .. payload_raw, snep_token_data.s, snep_token_data.ha) then
+            -- signature verified succesfully
+            return {key_name = snep_token_data.kn, sign_algo = "RSA", hash_algo = snep_token_data.ha}
         end
         -- either the signature was invalid, our public key is wrong, or the signature is older than seconds_to_check
-        error(`Failed to verify RSA signature for {snep.key_name}`)
-    elseif snep.sign_algo == "HMAC" then
-        assert(enSNEP._keys[snep.key_name].secret, `Failed to get secret for {snep.key_name}`)
-        while seconds_remaining > 0 do
-            if ll.HMAC(enSNEP._keys[snep.key_name].secret, tostring(utime - (seconds_to_check - seconds_remaining)) .. payload, snep.hash_algo) then
-                -- signature verified succesfully and is, at most, seconds_to_check old
-                return {key_name = snep.key_name, sign_algo = "HMAC", hash_algo = snep.hash_algo}
-            end
-            seconds_remaining -= 1
+        error(`Failed to verify RSA signature for {snep_token_data.kn}`)
+    elseif snep_token_data.sa == "HMAC" then
+        assert(enSNEP._keys[snep_token_data.kn].secret, `Failed to get secret for {snep_token_data.kn}`)
+        if ll.HMAC(enSNEP._keys[snep_token_data.kn].secret, tostring(snep_token_data.e) .. payload_raw, snep_token_data.ha) == snep_token_data.s then
+            -- signature verified succesfully
+            return {key_name = snep_token_data.kn, sign_algo = "HMAC", hash_algo = snep_token_data.ha}
         end
         -- either the signature was invalid, our public key is wrong, or the signature is older than seconds_to_check
-        error(`Failed to verify HMAC signature for {snep.key_name}`)
+        error(`Failed to verify HMAC signature for {snep_token_data.kn}`)
     else
-        error(`Unknown signature sign_algo: {snep.sign_algo}`)
+        error(`Unknown signature sign_algo: {snep_token_data.sa}`)
     end
 end
 
