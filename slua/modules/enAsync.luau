@@ -13,12 +13,14 @@ enCLEP.ListenChat("Domain", true, function (clep: enCLEPTypes.Message): ()
 end)
 ]]
 
+local enMultival = require("@en-framework/enMultival")
+
 local enTimers: typeof(require("@en-framework/enTimers"))
 
 local enAsync = {
     _awaiting = {} :: {[uuid|string]: {
         co: thread,
-        entimer_promise: uuid?
+        entimer_promise: uuid|string?
     }}
 }
 
@@ -73,17 +75,17 @@ function enAsync.Awaiting(
 end
 
 --[[
-Catches the uuid returned from a function that returns a promise (such as enCLEP.Send) and awaits it (yields the coroutine) 
+Catches the uuid returned from a function that returns a promise (such as enCLEP.Send) and awaits it (yields the coroutine).
 Must be run from inside a coroutine (namely, in an enAsync.Async call).
 It would be a good idea to wrap this in a pcall.
 @param promise_to_await Any UUID/string
-@param timeout_seconds Number of seconds until the coroutine resumes, returning nil
+@param timeout_seconds Optional: Number of seconds until the coroutine resumes, returning nil
 @return Any data ultimately passed as an argument to enAsync.Awaiting
 ]]
 function enAsync.Await(
     promise_to_await: uuid|string,
     timeout_seconds: number?
-): any?
+): ...any?
     local co = coroutine.running()
     assert(co, `No running coroutine`)
     enAsync._awaiting[promise_to_await] = {
@@ -93,6 +95,36 @@ function enAsync.Await(
         enAsync._awaiting[promise_to_await].entimer_promise = enTimers.Once(timeout_seconds, enAsync._Timeout, nil, promise_to_await)
     end
     return coroutine.yield()
+end
+
+--[[
+Equivalent to enAsync.Await, but performs a type check of the returned value (or multival).
+Must be run from inside a coroutine (namely, in an enAsync.Async call).
+It would be a good idea to wrap this in a pcall.
+@param promise_to_await Any UUID/string
+@param timeout_seconds Optional: Number of seconds until the coroutine resumes, returning nil
+@param ... Types to expect to be passed into enAsync.Awaiting (use nil to ignore a type)
+@return Any data ultimately passed as an argument to enAsync.Awaiting
+]]
+function enAsync.AwaitTyped(
+    promise_to_await: uuid|string,
+    timeout_seconds: number?,
+    ...: string?
+): ...any?
+    local result = {enAsync.Await(promise_to_await, timeout_seconds, ...)}
+    if enMultival.IsOnlyNil(...) then
+        return ...
+    end
+    local type_args = {...}
+    if #type_args ~= #result then
+        error(`Await returned {#result} vars, expected {#type_args}`)
+    end
+    for i = 1, #type_args do
+        if type_args[i] and typeof(result[i]) ~= type_args[i] then
+            error(`Await returned {typeof(result[i])} for arg #{i}, expected {type_args[i]}: {result[i]}`)
+        end
+    end
+    return ...
 end
 
 --[[
