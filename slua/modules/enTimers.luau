@@ -62,7 +62,7 @@ function enTimers._ResetTimer(): ()
 
     -- set the LLTimers timer, if needed
     local lowest_clock = nil :: number?
-    for promise, running in pairs(enTimers._running) do
+    for _, running in pairs(enTimers._running) do
         if not lowest_clock or running.clock < lowest_clock then
             -- this timer is, so far, the closest un-triggered timer
             lowest_clock = running.clock
@@ -102,6 +102,7 @@ function enTimers.Once(
         promise = ll.GenerateKey()
     end
     -- write the timer to memory
+    if not promise then return "" end -- type safety
     enTimers._running[promise] = {
         interval = nil,
         clock = os.clock() + seconds,
@@ -126,12 +127,13 @@ function enTimers.Every(
     callback_function: (promise: uuid|string, ...any) -> (),
     promise: uuid|string?,
     ...: any
-): uuid
+): uuid|string
     -- generate a promise, if we didn't get one
     if typeof(promise) ~= "uuid" and typeof(promise) ~= "string" then
         promise = ll.GenerateKey()
     end
     -- write the timer to memory
+    if not promise then return "" end -- type safety
     enTimers._running[promise] = {
         interval = seconds,
         clock = os.clock() + seconds,
@@ -154,25 +156,20 @@ function enTimers.Off(
 ): boolean
     if promise and enTimers._running[promise] then
         -- found via promise
-        LLTimers:off(enTimers._running[promise].func)
         enTimers._running[promise] = nil
         enTimers._ResetTimer()
         return true
     end
-    -- can LLTimers find it?
-    if not callback_function or not LLTimers:off(callback_function) then
-        -- nope. we can't either then, so don't waste time trying
-        return false
-    end
+    if not callback_function then return false end
     -- LLTimers found it, so we should be able to find it
     -- unfortunately this is slightly less efficient
     -- but if you're relying on functions anyway,
     -- you might just be able to use LLTimers raw
-    for promise, running in pairs(enTimers._running) do
+    for running_promise, running in pairs(enTimers._running) do
         if running.func == callback_function then
             -- found via function match
             -- we already off'd the LLTimers
-            enTimers._running[promise] = nil
+            enTimers._running[running_promise] = nil
             enTimers._ResetTimer()
             return true
         end

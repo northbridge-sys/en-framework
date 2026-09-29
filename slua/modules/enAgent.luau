@@ -13,7 +13,7 @@ function enAgent.GetGroup(agent_uuid: uuid): uuid
     if #attaches == 0 or attaches[1] == "NOT ON REGION" or attaches[1] == "NOT FOUND" then
         return NULL_KEY
     end
-    local attachment_uuid = touuid(attaches[1])
+    local attachment_uuid = touuid(attaches[1]) or NULL_KEY
     local details = ll.GetObjectDetails(attachment_uuid, {OBJECT_GROUP})
     local uuid = touuid(details[1])
     if not uuid then return NULL_KEY end

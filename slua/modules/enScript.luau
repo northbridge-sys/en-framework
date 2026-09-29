@@ -6,7 +6,7 @@ local enScript = {}
 
 function enScript.Stop(): ()
     enConsole.Print(`Script "{ll.GetScriptName()}" stopped`)
-    ll.SetScriptState(ll.GetScriptName(), 0)
+    ll.SetScriptState(ll.GetScriptName(), false)
     ll.Sleep(1.0) -- give the simulator time to stop the script to be safe
     ll.ResetScript()
 end

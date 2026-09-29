@@ -20,7 +20,7 @@ function enPUMA.WritePair(link: number, key: string, value: any?, encoding: stri
     -- value encoding
     if value then
         if encoding == enPUMA.ENCODING.BASE64 then
-            value = ll.StringToBase64(tostring(value))
+            value = llbase64.encode(tostring(value))
         elseif encoding == enPUMA.ENCODING.BASE92 then
             error(`BASE92 not implemented`) -- TODO
         end
@@ -43,7 +43,7 @@ function enPUMA.WritePair(link: number, key: string, value: any?, encoding: stri
     if not value_ok then
         -- we were passed a value as ASCII or undefined, but it can't be represented in printable PUMA-safe ASCII, so convert to base64 instead
         encoding = enPUMA.ENCODING.BASE64
-        value = ll.StringToBase64(tostring(value))
+        value = llbase64.encode(tostring(value))
     end
 
     -- read PUMA from prim
@@ -56,9 +56,9 @@ function enPUMA.WritePair(link: number, key: string, value: any?, encoding: stri
     enPUMA._WriteTable(link, scope :: number, puma)
 end
 
-function enPUMA._WriteTable(link: number, scope: number, puma: {}): ()
+function enPUMA._WriteTable(link: number, scope: number, puma: {[string]: string}): ()
     -- prioritize description, then hovertext, then name
-    local puma_list = {}
+    local puma_list = {} :: {string}
     for key, value in puma do
         table.append(puma_list, key, value)
     end
@@ -81,7 +81,7 @@ function enPUMA.DecodeValue(value: string): string
     local encoding = string.sub(value, 1, 1)
     value = string.sub(value, 2)
     if encoding == enPUMA.ENCODING.BASE64 then
-        return ll.Base64ToString(value)
+        return llbase64.decode(value)
     elseif encoding == enPUMA.ENCODING.BASE92 then
         error(`BASE92 not implemented`) -- TODO
     end
@@ -109,7 +109,9 @@ function enPUMA.GetTable(prim_uuid: uuid, decode: boolean?): {}
     local puma = {}
     for i = 1, #puma_list, 2 do
         puma[puma_list[i]] = puma_list[i + 1]
-        if decode then puma[puma_list[i]] = enPUMA.DecodeValue(puma[puma_list[i]]) end
+        if decode then
+            puma[puma_list[i]] = enPUMA.DecodeValue(puma[puma_list[i]])
+        end
     end
     return puma
 end

@@ -27,11 +27,15 @@ end
 function enLNX._Header(scope: string, linknum: number?, script: string?): string
     if scope == enLNX.SCOPE.SCRIPT then
         local key = ll.GetKey()
-        if linknum then key = ll.GetLinkKey(linknum) end
+        if linknum then
+            key = ll.GetLinkKey(linknum)
+        end
         return tostring(key) .. "\n" .. (script or ll.GetScriptName()) .. "\n"
     elseif scope == enLNX.SCOPE.PRIM then
         local key = ll.GetKey()
-        if linknum then key = ll.GetLinkKey(linknum) end
+        if linknum then
+            key = ll.GetLinkKey(linknum)
+        end
         return tostring(key) .. "\n\n"
     else
         return "\n\n"
@@ -53,7 +57,9 @@ end
 function enLNX.Write(scope: string, path: {string}, data: any?, linknum: number?): boolean
     assert(enLNX._init, `Run enLNX.Init() first`)
     local value = ""
-    if data ~= nil then value = lljson.slencode(data) end
+    if data ~= nil then
+        value = lljson.slencode(data)
+    end
     return ll.LinksetDataWrite(enLNX.PathToPair(scope, path, linknum), value) ~= 0
 end
 
@@ -123,7 +129,7 @@ function enLNX.FindChildrenRecursive(scope: string, path: {string}, start: numbe
 end
 
 function enLNX.Exists(scope: string, path: {string}, linknum: number?): boolean
-    return enLNX.Find(scope, path) ~= {}
+    return next(enLNX.Find(scope, path, 1, 1, linknum)) ~= nil
 end
 
 function enLNX.FindRegex(scope: string, regex: string, start: number?, count: number?, linknum: number?): {string}
@@ -150,7 +156,7 @@ function enLNX._Purge(): ()
     -- purge data pairs by prim and script
     local i = 1
     local keys = ll.LinksetDataFindKeys(`^[0-9a-fA-F-]{36}\n.*$`, i, 1)
-    while keys ~= {} do
+    while next(keys) ~= nil do
         local path = string.split(tostring(keys[1]), "\n")
         if touuid(path[1]) then
             -- this is either a prim-scope or script-scope pair, so check that the prim is still part of this linkset
@@ -177,7 +183,7 @@ function enLNX._Purge(): ()
     -- purge primuuid backups by linknum
     i = 1
     keys = ll.LinksetDataFindKeys(`^[0-9]*\n.*$`, i, 1)
-    while keys ~= {} do
+    while next(keys) ~= nil do
         local s_key = tostring(keys[1])
         if s_key then
             local path = string.split(s_key, "\n")
@@ -195,19 +201,20 @@ end
 
 function enLNX._MigratePrim(old_prim_uuid: uuid): ()
     if not old_prim_uuid or old_prim_uuid == uuid(NULL_KEY) or old_prim_uuid == ll.GetKey() then return end
-    if enConsole then enConsole.Debug(`Migrating LNX datastore for prim {old_prim_uuid} to prim {ll.GetKey()}`) end
+    if enConsole then
+        enConsole.Debug(`Migrating LNX datastore for prim {old_prim_uuid} to prim {ll.GetKey()}`)
+    end
     local keys = ll.LinksetDataFindKeys(`^{enEscape.Regex(tostring(old_prim_uuid))}\n.*\n.*$`, 1, 1)
     while keys[1] do
         local s_old_key = tostring(keys[1])
         local old_key = string.split(s_old_key, "\n")
-        local new_key = {}
-        for index, value in old_key do
-            new_key[index] = value
-        end
-        new_key[1] = tostring(ll.GetKey())
+        local new_key = table.clone(old_key)
+        new_key[1] = tostring(ll.GetKey()) -- replace prim uuid element of lsd key
         ll.LinksetDataWrite(table.concat(new_key, "\n"), ll.LinksetDataRead(s_old_key))
         ll.LinksetDataDelete(s_old_key)
-        if enConsole then enConsole.Trace(`LNX pair \{{table.concat(old_key, ",")}\} prim-migrated to \{{table.concat(new_key, ",")}\}`) end
+        if enConsole then
+            enConsole.Trace(`LNX pair \{{table.concat(old_key, ",")}\} prim-migrated to \{{table.concat(new_key, ",")}\}`)
+        end
         keys = ll.LinksetDataFindKeys(`^{enEscape.Regex(tostring(old_prim_uuid))}\n.*\n.*$`, 1, 1)
     end
 end
@@ -220,11 +227,8 @@ function enLNX._MigrateScript(old_script_name: string): ()
     while keys[1] do
         local s_old_key = tostring(keys[1])
         local old_key = string.split(s_old_key, "\n")
-        local new_key = {}
-        for index, value in old_key do
-            new_key[index] = value
-        end
-        new_key[2] = ll.GetScriptName()
+        local new_key = table.clone(old_key)
+        new_key[2] = ll.GetScriptName() -- replace script name element of lsd key
         ll.LinksetDataWrite(table.concat(new_key, "\n"), ll.LinksetDataRead(s_old_key))
         ll.LinksetDataDelete(s_old_key)
         enConsole.Trace(`LNX pair \{{table.concat(old_key, ",")}\} script-migrated to \{{table.concat(new_key, ",")}\}`)
@@ -269,7 +273,7 @@ LLEvents:on("changed", function(change: number): ()
 end)
 
 enLNX._scriptname = ll.GetScriptName() -- presume the script name did not change, so just reset it
-enLNX._primuuid = enLNX._RecallPrimUUID() -- old prim uuid needs to be recovered from LNX backup
+enLNX._primuuid = enLNX._RecallPrimUUID() or ll.GetKey() -- old prim uuid needs to be recovered from LNX backup
 if enLNX._primuuid == NULL_KEY then
     -- we had no backup, so back it up now
     enLNX._primuuid = ll.GetKey()

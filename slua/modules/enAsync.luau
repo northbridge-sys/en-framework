@@ -26,7 +26,7 @@ local enAsync = {
 
 -- Internal function.
 function enAsync._Timeout(
-    entimer_promise: uuid|string,
+    _entimer_promise: uuid|string,
     ...: any
 ): ()
     -- something timed out, return the await as nil (resumes coroutine)

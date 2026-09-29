@@ -39,7 +39,9 @@ function enListen.Open(
 ): ()
     enListen.Close(domain_or_channel)
     local count = 0
-    for _ in pairs(enListen._open) do count += 1 end
+    for _ in pairs(enListen._open) do
+        count += 1
+    end
     assert(count < 65, "Too many listens") -- maximum 65 listens per script
 
     local channel = enCHUF.Channel(domain_or_channel)
@@ -82,8 +84,8 @@ end
 
 --- Closes all chat listens opened with enListen.Open.
 function enListen.CloseAll(): ()
-    for channel, handle in pairs(enListen._open) do
-        ll.ListenRemove(handle)
+    for _, listener in pairs(enListen._open) do
+        ll.ListenRemove(listener.handle)
     end
     enListen._open = {}
     -- always unsubscribe
