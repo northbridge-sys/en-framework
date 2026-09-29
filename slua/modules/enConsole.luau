@@ -17,7 +17,7 @@ local enListen: typeof(require("@en-framework/enListen"))
 local enSNEP: typeof(require("@en-framework/enSNEP"))
 
 local enConsole = {
-    _snep_key = nil :: enSNEPTypes.Key?,
+    _snep_key = nil :: enSNEPTypes.RSAKeyPair|enSNEPTypes.HMACKey?,
     _debugger = nil :: uuid?,
     _callbacks = {
         log = nil :: (message: string, message_level: number, object_level: number, func_name: string, line: number, target_uuid: uuid?) -> ()?
@@ -70,8 +70,8 @@ function enConsole.Init(
     if enCLEP and enSNEP and debug_secret then
         enCLEP.Init(enListen, enSNEP, enConsole.Log)
         enCLEP.ListenChat("enConsole", false, enConsole._clep_message)
-        enConsole._snep_key = enSNEPTypes.NewHMAC("enConsole", debug_secret)
-        enSNEP.Enroll(enConsole._snep_key :: enSNEPTypes.Key)
+        enConsole._snep_key = enSNEPTypes.NewHMACKey("enConsole", debug_secret)
+        enSNEP.Enroll(enConsole._snep_key :: enSNEPTypes.HMACKey)
         enConsole.Debug("enConsole initialized with debug log routing")
     else
         enConsole.Debug("enConsole initialized without debug log routing")
@@ -106,7 +106,7 @@ function enConsole.Log(level: number, message: string, target_uuid: uuid?): ()
             return
         end
         -- just send to owner
-        ll.OwnerSay(message)
+        print(message)
     end
 end
 
