@@ -28,8 +28,7 @@ function enSNEP.GenerateTokenHMAC(
         ha = hash_algo or "sha256",
         kn = hmac_key.key_name,
         e = utime + (expiry_seconds or 60),
-        s = ll.HMAC(hmac_key.secret :: string, tostring(utime + (expiry_seconds or 60)) .. payload_raw, hash_algo or "sha256"),
-        snep = 1 -- SNEP v1
+        s = ll.HMAC(hmac_key.secret :: string, tostring(utime + (expiry_seconds or 60)) .. payload_raw, hash_algo or "sha256")
     })
 end
 
@@ -45,8 +44,7 @@ function enSNEP.GenerateTokenRSA(
         ha = hash_algo or "sha256",
         kn = rsa_key_pair.key_name,
         e = utime + (expiry_seconds or 60),
-        s = ll.SignRSA(rsa_key_pair.private_key :: string, tostring(utime + (expiry_seconds or 60)) .. payload_raw, hash_algo or "sha256"),
-        snep = 1 -- SNEP v1
+        s = ll.SignRSA(rsa_key_pair.private_key :: string, tostring(utime + (expiry_seconds or 60)) .. payload_raw, hash_algo or "sha256")
     })
 end
 
