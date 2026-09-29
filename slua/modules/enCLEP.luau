@@ -96,11 +96,15 @@ end
 
 function enCLEP._link_message(linknum: number, num: number, message: string, key: uuid|string): any?
 
-    if enCLEP._verbose then enCLEP._Trace(`enCLEP._link_message({linknum}, {num}, "{message}", "{key}") ➔ ...`) end
+    if enCLEP._verbose then
+        enCLEP._Trace(`enCLEP._link_message({linknum}, {num}, "{message}", "{key}") ➔ ...`)
+    end
 
     local success, clep = pcall(enCLEP._Unmarshal, message, {prim = ll.GetLinkKey(linknum), link = linknum})
     if not success then
-        if enCLEP._verbose then enCLEP._Trace(`Dropped CLEP message from link {linknum}: {clep}`) end
+        if enCLEP._verbose then
+            enCLEP._Trace(`Dropped CLEP message from link {linknum}: {clep}`)
+        end
         return 0x12
     end
 
@@ -115,12 +119,16 @@ end
 
 function enCLEP._listen(domain: string | number, name: string, key: uuid, data: any): any?
     
-    if enCLEP._verbose and enDump then enCLEP._Trace(`enCLEP._listen("{domain}", "{name}", "{key}", {enDump.Table(data)}) ➔ ...`) end
+    if enCLEP._verbose and enDump then
+        enCLEP._Trace(`enCLEP._listen("{domain}", "{name}", "{key}", {enDump.Table(data)}) ➔ ...`)
+    end
 
     -- for listens, enListen does the json decode and passes a raw data value, so we can skip the decode here
     local success, clep = pcall(enCLEP._Unmarshal, data, {prim = key})
     if not success then
-        if enCLEP._verbose then enCLEP._Trace(`Dropped CLEP message from {key}: {clep}`) end
+        if enCLEP._verbose then
+            enCLEP._Trace(`Dropped CLEP message from {key}: {clep}`)
+        end
         return 0x10
     end
 
@@ -253,6 +261,7 @@ Sends a message via CLEP, either via chat or link message, depending on target.
 @param params Optional: Any data (required for responses, which must return the request's clep.payload.params)
 @param id Optional: Force a message UUID (required for responses, which must return the request's clep.payload.id)
 @param result Optional: Any data (required for responses, to signal a response)
+@param headers Optional: dictionary of headers to pass with message (note that these are not signed)
 @return Message UUID used for outbound message (can be awaited, though there is no guarantee of a response)
 ]]
 function enCLEP.Send(
@@ -295,21 +304,32 @@ function enCLEP.Send(
 
     payload.target.force_chat = nil -- do not pass force_chat param
 
-    -- set output in "transit" encapsulation; first, slencode payload to have a static signable message
-    local output = {
-        payload = lljson.slencode(payload, {tight = true})
-    }
+    -- construct payload part of output
+    local output = lljson.slencode(payload, {tight = true})
 
-    -- TODO: redo these
-    if key then
+    local formatted_headers = {}
+
+    if key and enSNEP then
+        -- we have a SNEP key, so sign the message
         if key.sym then
-            output.snep = enSNEPTypes.SignHMAC(key :: enSNEPTypes.HMACKey, output.payload)
+            -- symmetric key (HMAC)
+            table.insert(formatted_headers, "SNEP:" .. enSNEP.GenerateTokenHMAC(output, key :: enSNEPTypes.HMACKey))
         else
-            output.snep = enSNEPTypes.SignRSA(key :: enSNEPTypes.RSAKeyPair, output.payload)
+            -- asymmetric key (RSA)
+            table.insert(formatted_headers, "SNEP:" .. enSNEP.GenerateTokenRSA(output, key :: enSNEPTypes.RSAKeyPair))
         end
-    else
-        -- if we're not using a SNEP signature, add the optional CLEP-level utime value
-        output.utime = os.time()
+    end
+
+    if headers then
+        for k, v in pairs(headers) do
+            -- we need to strip : out of keys for parsing reasons
+            -- we also need to strip \n out of keys and values for parsing reasons
+            table.insert(formatted_headers, ll.ReplaceSubString(ll.ReplaceSubString(k, ":", "", 0) .. ":" .. v, "\n", "", 0))
+        end
+    end
+
+    if #formatted_headers > 0 then
+        output = table.concat(formatted_headers, "\n") .. "\n" .. output
     end
 
     local channel = enCHUF.Channel(payload.domain)
@@ -344,8 +364,10 @@ function enCLEP.Send(
         (target.link and target.link == LINK_THIS or target.link == ll.GetLinkNumber())
         or (target.prim and target.prim == ll.GetKey())
     ) then
-        enCLEP._link_message(ll.GetLinkNumber(), 0, lljson.slencode(output, {tight = true}), NULL_KEY) -- pass it back in as if it were received as a link_message
-        if enCLEP._verbose then enCLEP._Trace(`{func_trace} ➔ enCLEP._link_message(...) (loopback)`) end
+        enCLEP._link_message(ll.GetLinkNumber(), 0, output, NULL_KEY) -- pass it back in as if it were received as a link_message
+        if enCLEP._verbose then
+            enCLEP._Trace(`{func_trace} ➔ enCLEP._link_message(...) (loopback)`)
+        end
         return payload.id
     end
 
@@ -354,13 +376,17 @@ function enCLEP.Send(
         -- we are using a link number or LINK_* constant (LINK_SET, LINK_ALL_OTHERS, LINK_ALL_CHILDREN, or LINK_THIS)
         if target.force_chat then
             -- use RegionSayTo
-            ll.RegionSayTo(ll.GetLinkKey(target.link), channel, lljson.slencode(output, {tight = true}))
-            if enCLEP._verbose then enCLEP._Trace(`{func_trace} ➔ ll.RegionSayTo({ll.GetLinkKey(target.link)}, {channel}, ...) (forced from link {target.link})`) end
+            ll.RegionSayTo(ll.GetLinkKey(target.link), channel, output)
+            if enCLEP._verbose then
+                enCLEP._Trace(`{func_trace} ➔ ll.RegionSayTo({ll.GetLinkKey(target.link)}, {channel}, ...) (forced from link {target.link})`)
+            end
             return payload.id
         else
             -- use MessageLinked
-            ll.MessageLinked(target.link, 0, lljson.slencode(output, {tight = true}), uuid(NULL_KEY) :: uuid)
-            if enCLEP._verbose then enCLEP._Trace(`{func_trace} ➔ ll.MessageLinked({target.link}, ...)`) end
+            ll.MessageLinked(target.link, 0, output, uuid(NULL_KEY) :: uuid)
+            if enCLEP._verbose then
+                enCLEP._Trace(`{func_trace} ➔ ll.MessageLinked({target.link}, ...)`)
+            end
             return payload.id
         end
     end
@@ -375,28 +401,36 @@ function enCLEP.Send(
                 -- the UUID of the linknum within our OWN linkset matches the targeted prim's UUID, so it is part of our linkset
                 -- use MessageLinked instead of RegionSayTo, since it's faster and RST fails on same-prim messages
                 -- if you want to not use link messages at all between prims, force chat for other prims in the same linkset (not same prim) using target.force_chat = true
-                ll.MessageLinked(link, 0, lljson.slencode(output, {tight = true}), uuid(NULL_KEY) :: uuid)
-                if enCLEP._verbose then enCLEP._Trace(`{func_trace} ➔ ll.MessageLinked({link}, ...)`) end
+                ll.MessageLinked(link, 0, output, uuid(NULL_KEY) :: uuid)
+                if enCLEP._verbose then
+                    enCLEP._Trace(`{func_trace} ➔ ll.MessageLinked({link}, ...)`)
+                end
                 return payload.id
             end
             -- prim is in some other linkset in the region
             -- use RegionSayTo
-            ll.RegionSayTo(target.prim, channel, lljson.slencode(output, {tight = true}))
-            if enCLEP._verbose then enCLEP._Trace(`{func_trace} ➔ ll.RegionSayTo({target.prim}, {channel}, ...)`) end
+            ll.RegionSayTo(target.prim, channel, output)
+            if enCLEP._verbose then
+                enCLEP._Trace(`{func_trace} ➔ ll.RegionSayTo({target.prim}, {channel}, ...)`)
+            end
             return payload.id
         end
         -- prim does not exist in this region
         -- use Shout (can cross region border up to 100m)
-        ll.Shout(channel, lljson.slencode(output, {tight = true}))
-        if enCLEP._verbose then enCLEP._Trace(`{func_trace} ➔ ll.Shout({channel}, ...)`) end
+        ll.Shout(channel, output)
+        if enCLEP._verbose then
+            enCLEP._Trace(`{func_trace} ➔ ll.Shout({channel}, ...)`)
+        end
         return payload.id
     end
 
     -- no target set
     -- broadcast to all prims in the region
     -- use RegionSay
-    ll.RegionSay(channel, lljson.slencode(output, {tight = true}))
-    if enCLEP._verbose then enCLEP._Trace(`{func_trace} ➔ ll.RegionSay({channel}, ...)`) end
+    ll.RegionSay(channel, output)
+    if enCLEP._verbose then
+        enCLEP._Trace(`{func_trace} ➔ ll.RegionSay({channel}, ...)`)
+    end
     return payload.id
 end
 
@@ -411,7 +445,7 @@ function enCLEP.Respond(
     key: enSNEPTypes.RSAKeyPair|enSNEPTypes.HMACKey?,
     clep: enCLEPTypes.Message?,
     result: any
-): uuid
+): uuid?
     if not clep then return nil end
     return enCLEP.Send(
         key,
@@ -542,7 +576,7 @@ function enCLEP._Unmarshal(message: any, source: {prim: uuid, link: number?}): e
     
     local metadata = {source = source}
 
-    if headers.snep and enSNEP then
+    if headers.SNEP and enSNEP then
         -- we have a signature to validate
         local success, verification = pcall(enSNEP.Verify, payload_raw :: string, headers.SNEP)
         if success and verification then -- signature verified successfully
