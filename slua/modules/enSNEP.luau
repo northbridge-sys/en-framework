@@ -22,13 +22,15 @@ function enSNEP.GenerateTokenHMAC(
     expiry_seconds: number?,
     hash_algo: "md5"|"sha1"|"sha224"|"sha256"|"sha384"|"sha512"?
 ): string
+    local nonce = ll.GenerateKey()
     local expire_time = os.time() + (expiry_seconds or 60)
     return lljson.encode({
         sa = "HMAC", -- sign algo
         ha = hash_algo or "sha256",
         kn = hmac_key.key_name,
+        n = nonce,
         e = expire_time,
-        s = ll.HMAC(hmac_key.secret :: string, tostring(expire_time) .. payload_raw, hash_algo or "sha256")
+        s = ll.HMAC(hmac_key.secret :: string, tostring(nonce) .. tostring(expire_time) .. payload_raw, hash_algo or "sha256")
     })
 end
 
@@ -38,13 +40,15 @@ function enSNEP.GenerateTokenRSA(
     expiry_seconds: number?,
     hash_algo: "sha1"|"sha224"|"sha256"|"sha384"|"sha512"?
 ): string
+    local nonce = ll.GenerateKey()
     local expire_time = os.time() + (expiry_seconds or 60)
     return lljson.encode({
         sa = "RSA", -- sign algo
         ha = hash_algo or "sha256",
         kn = rsa_key_pair.key_name,
+        n = nonce,
         e = expire_time,
-        s = ll.SignRSA(rsa_key_pair.private_key :: string, tostring(expire_time) .. payload_raw, hash_algo or "sha256")
+        s = ll.SignRSA(rsa_key_pair.private_key :: string, tostring(nonce) .. tostring(expire_time) .. payload_raw, hash_algo or "sha256")
     })
 end
 
