@@ -24,7 +24,9 @@ type self = {
         source: {
             region: string,
             prim: uuid,
-            script: string
+            script: string,
+            email: string?,
+            url: string?
         },
         target: {
             link: number?,
