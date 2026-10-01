@@ -271,8 +271,7 @@ function enCLEP.Send(
         prim: uuid?,
         root: uuid?,
         link: number?,
-        script: string?,
-        force_chat: boolean?
+        script: string?
     },
     domain: string,
     method: {string},
@@ -301,8 +300,6 @@ function enCLEP.Send(
         result = result,
         utime = os.time()
     }
-
-    payload.target.force_chat = nil -- do not pass force_chat param
 
     -- construct payload part of output
     local output = lljson.slencode(payload, {tight = true})
@@ -344,10 +341,7 @@ function enCLEP.Send(
     {link = link_number}
 
     All listening scripts in a specific prim in any linkset (this opportunistically routes via MessageLinked):
-    {prim = prim_uuid}
-
-    To force RegionSayTo for other prims in this linkset (not this prim), add to any above configuration:
-    {force_chat = true}
+    {prim = prim_uuid}]
 
     To allow CLEP relays to route your message, add to any above configuration:
     {region = region_name}
@@ -374,21 +368,12 @@ function enCLEP.Send(
     -- direct link target
     if target.link then
         -- we are using a link number or LINK_* constant (LINK_SET, LINK_ALL_OTHERS, LINK_ALL_CHILDREN, or LINK_THIS)
-        if target.force_chat then
-            -- use RegionSayTo
-            ll.RegionSayTo(ll.GetLinkKey(target.link), channel, output)
-            if enCLEP._verbose then
-                enCLEP._Trace(`{func_trace} ➔ ll.RegionSayTo({ll.GetLinkKey(target.link)}, {channel}, ...) (forced from link {target.link})`)
-            end
-            return payload.id
-        else
-            -- use MessageLinked
-            ll.MessageLinked(target.link, 0, output, uuid(NULL_KEY) :: uuid)
-            if enCLEP._verbose then
-                enCLEP._Trace(`{func_trace} ➔ ll.MessageLinked({target.link}, ...)`)
-            end
-            return payload.id
+        -- use MessageLinked
+        ll.MessageLinked(target.link, 0, output, uuid(NULL_KEY) :: uuid)
+        if enCLEP._verbose then
+            enCLEP._Trace(`{func_trace} ➔ ll.MessageLinked({target.link}, ...)`)
         end
+        return payload.id
     end
 
     -- direct prim target
@@ -397,7 +382,7 @@ function enCLEP.Send(
         local link = tonumber(ll.GetObjectDetails(target.prim, {OBJECT_LINK_NUMBER})[1]) -- attempt to get the linknum of the prim within its linkset
         if link then
             -- prim exists in the region
-            if ll.GetLinkKey(link) == target.prim and (not target.force_chat or link == ll.GetLinkNumber()) then
+            if ll.GetLinkKey(link) == target.prim then
                 -- the UUID of the linknum within our OWN linkset matches the targeted prim's UUID, so it is part of our linkset
                 -- use MessageLinked instead of RegionSayTo, since it's faster and RST fails on same-prim messages
                 -- if you want to not use link messages at all between prims, force chat for other prims in the same linkset (not same prim) using target.force_chat = true
@@ -462,7 +447,7 @@ function enCLEP._MissingElement(path: string, required: string, got: string): ()
     error(`Missing CLEP element {path} as {required} (got {got})`)
 end
 
-function enCLEP._Unmarshal(message: any, source: {prim: uuid, link: number?}): enCLEPTypes.Message?
+function enCLEP._Unmarshal(message: any, source: {prim: uuid, link: number?, email: string?, url: string?}): enCLEPTypes.Message?
 
     -- Inbound message should be a raw string
     if typeof(message) ~= "string" then return nil end
@@ -474,7 +459,9 @@ function enCLEP._Unmarshal(message: any, source: {prim: uuid, link: number?}): e
         source: {
             region: string,
             prim: uuid,
-            script: string
+            script: string,
+            email: string?,
+            url: string?
         },
         target: {
             link: number?,
@@ -488,6 +475,11 @@ function enCLEP._Unmarshal(message: any, source: {prim: uuid, link: number?}): e
         params: any?,
         result: any?
     }?
+
+    --[[
+    see https://www.latacora.com/blog/2019/07/24/how-not-to-sign-json/ for why headers exist
+    ]]
+
     local sol = 1
     local newline_index = string.find(message, "\n", sol, true)
     local eol = newline_index or #message
