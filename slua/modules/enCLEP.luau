@@ -308,13 +308,7 @@ function enCLEP.Send(
 
     if key and enSNEP then
         -- we have a SNEP key, so sign the message
-        if key.sym then
-            -- symmetric key (HMAC)
-            table.insert(formatted_headers, "SNEP:" .. enSNEP.GenerateTokenHMAC(output, key :: enSNEPTypes.HMACKey))
-        else
-            -- asymmetric key (RSA)
-            table.insert(formatted_headers, "SNEP:" .. enSNEP.GenerateTokenRSA(output, key :: enSNEPTypes.RSAKeyPair))
-        end
+        table.insert(formatted_headers, "SNEP:" .. enSNEP.GenerateSignature(output, key))
     end
 
     if headers then
