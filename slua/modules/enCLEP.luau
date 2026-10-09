@@ -278,7 +278,8 @@ function enCLEP.Send(
     params: any?,
     id: uuid?,
     result: any?,
-    headers: {[string]: string}?
+    headers: {[string]: string}?,
+    direct: boolean?
 ): uuid
     if target.prim == NULL_KEY then
         target.prim = nil -- do not allow passing NULL_KEY as target_prim, because it will not be accepted by anyone
@@ -394,6 +395,9 @@ function enCLEP.Send(
             end
             return payload.id
         end
+
+        assert(not direct, "enCLEP.Send called to indirect target when direct = true")
+
         -- prim does not exist in this region
         -- use Shout (can cross region border up to 100m)
         ll.Shout(channel, output)
@@ -402,6 +406,8 @@ function enCLEP.Send(
         end
         return payload.id
     end
+        
+    assert(not direct, "enCLEP.Send called to indirect target when direct = true")
 
     -- no target set
     -- broadcast to all prims in the region
