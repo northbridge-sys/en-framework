@@ -6,7 +6,7 @@
 
 ## Introduction
 
-**En is under active and ongoing development; many functions have not been fully tested. Do not use this framework in your projects until this message is removed! It is experimental and highly unstable!**
+**Only the SLua modules of En are actively supported. Some of the included LSL modules are unsupported and do not comply with the final versions of GSI recommendations. They are frozen while the SLua verions are being developed and tested.**
 
 An unofficial framework for the [Linden Scripting Language](https://wiki.secondlife.com/wiki/LSL_Portal) and [SLua](https://create.secondlife.com/script/) in [Second Life](https://secondlife.com/).
 
@@ -18,11 +18,14 @@ LSL and SLua are the native scripting languages used to control Second Life obje
 
 Some of the useful features En provides:
 
+- enAsync - a convenient async-await wrapper around coroutines (SLua only)
 - enConsole - a standardized logging interface that can be configured for "in-the-field" debugging
 - enCLEP - heavily extended `llMessageLinked` and `llListen`-like functions
 - enLNX - functions to safely write, read, and manipulate key-value pairs in the `llLinksetData*` store
 - enKVS - simple in-memory key-value store (LSL only)
-- enTimers - `LLTimers` simulacrum for LSL, allowing string callbacks, multiple concurrent timers, and one-shot timers
+- enPUMA - fast tiny datastore accessible for any prim in the region
+- enSNEP - GSI SNEP message signing
+- enTimers - `LLTimers` simulacrum for LSL and extended `LLTimers` for SLua, allowing callbacks, multiple concurrent timers, one-shot timers, and passing arbitrary variant arguments to callback functions
 - Helper modules for integers (including hex & bitwise), floats, vectors, rotations, strings, lists, and keys
 - Miscellaneous additional modules for avatars, environments, inventory, object parameters, and time/dates
 - Complete utility scripts
@@ -66,26 +69,6 @@ Make sure to enable the "script optimizer" option in your preprocessor(s); En mo
 *If you're only interested in LSL, you can skip this section.*
 
 SLua currently requires [Visual Studio Code](https://code.visualstudio.com/) and the [official Second Life VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin). Make sure to install the additional recommended plugins. No viewers have built-in support for SLua `require()` processing as of this version.
-
-The general process for setting up script association in VSCode is as follows:
-
-1. If you expect to use `@file` (recommended), open the settings for the extension and enable the following (and any other options you want):
-    1. *Include File Meta In Output*
-    1. *Use File Meta For Matching*
-1. Create a project folder (see **Include/Require Instructions** below).
-1. In VSCode, create a new workspace by opening that folder in a new window. You can open the folder in an existing workspace, but in-world scripts will only associate to master scripts in the first folder you open in the workspace (you can require ModuleScripts from other folders).
-1. Add any additional folders (typically modules containing one or more ModuleScripts) into the workspace.
-1. In the original folder, create a file ending in “.luau”. It can be in a subdirectory, like “subdirectory/example.luau”. This will be the master script, where you do all editing.
-1. In SL, create a script in an object. There are two ways to associate this script to a master script in VSCode, use only one:
-    1. The safest method is to add the line (adapt to your needs): `--@file New Script.luau`  to the top of the script before editing it. This must point to the master file in relation to the original folder and can include subdirectories of your project directory. Don’t include the name of the original folder.
-    1. If there is no `--@file` directive, you must name the script the same name as a file in the original folder (with or without “.luau”), like “New Script” or “New Script.luau”.
-        1. Don’t include any folder names; this will search through the entire original folder and all subdirectories for a name match. If there are multiple matches, the first is used (this appears alphabetical, but this use case should be avoided in general, so it wasn’t tested).
-        1. Note that the script name as shown in the built-in editor is sent to VSCode for association when you click [Edit…]. In the vanilla viewer, the script name does not update in the built-in editor if it is open while you rename the script in the object’s inventory - it must be closed and reopened.
-        1. Be careful - if you have *Include File Meta In Output* enabled, a `--@file` directive is added to the finished file and will be used whenever re-editing this script from the viewer, overriding the script name. You’ll need to change the `--@file` directive instead of renaming the script if you change the name of the master script on your PC.
-1. Open the script (if it is not yet open) and click [Edit…] in the lower right. This will open VSCode and attempt to associate the script with a master script in the original folder of the active workspace using one of the above methods. If an association is made, VSCode will also open the master script in another tab, leaving the preprocessed source tab in the background.
-1. Perform all edits in the master script. When you save it, VSCode will preprocess it, send it back to your Second Life viewer, and Second Life will save it and start running it.
-    1. This preprocessing is only performed if the temporary script is open in VSCode, so keep both tabs open until you’re finished.
-1. When finished, close both tabs. To reopen the script in VSCode, just open it and click [Edit…] again.
 
 SLua does not currently support tree-shaking; all code you write or require counts against memory, and duplicate requires cost memory. Therefore, SLua modules must be required manually.
 
@@ -183,7 +166,7 @@ local enConsole = require("@en-framework/enConsole")
 
 We recommend requiring each module into its own table so that its function names match the documentation.
 
-Note that you should not `require()` more than the modules you need for your script; SLua does no optimization of unused code.
+Note that you should not `require()` more than the modules you need for your script; SLua currently does no optimization of unused code.
 
 ## Reference Guide
 
@@ -197,10 +180,10 @@ LSL kind of sucks. A lot of code snippets end up copied and pasted across multip
 
 Many Second Life viewers provide the ability to use an external LSL editor, and some also include the LSL preprocessor, a tool that allows developers to use a limited set of C preprocessor directives to manipulate LSL source code. Additionally, En began development a few years before the release of SLua, which incidentally provides a lot of similar functionality.
 
-We (well, I) developed the En Framework to accomplish three things:
+The En Framework was developed to accomplish three things:
 - I develop a lot of different projects at the same time that share the same code or need to take advantage of the same tricks (or avoid the same pitfalls). Saving all of these tricks into a shared library makes it possible to push fixes and other improvements automatically when compiling any script. Eventually, since LSL does not support runtime event subscription, this necessitated a framework to automatically build event handlers to catch certain events when hooked by preprocessor definitions or other library functions.
 - The built-in functions for inter-script data storage and transfer essentially only store and send raw strings; any protocols necessary to send anything more must be implemented manually. Defining standard methods for communicating with scripts and storing data ensures long-term cross-product compatibility, and doing it with a framework allows scripts to be high-level, cleaner, and easier to maintain. We strive to make it easy to mod our products, so offering the underlying framework helps interested scripters be familiar with many products by learning only a few library functions.
-- En LSL scripts are naturally compatible with En SLua scripts; for example, regardless of which language you use, enLNX implements the same open [LNX](https://gsi.sh/rec/lnx) datastore namespace standard, and enCLEP/enSNEP implement the same open [CLEP](https://gsi.sh/rec/clep) protocol and [SNEP](https://gsi.sh/rec/snep) signatures. This is important because LSO2-compiled LSL scripts, while slow, cross between regions very quickly, so still have some utility.
+- En LSL scripts are naturally compatible with En SLua scripts; for example, regardless of which language you use, enLNX implements the same open [LNX](https://gsi.sh/rec/lnx) datastore namespace standard, and enCLEP/enSNEP implement the same open [CLEP](https://gsi.sh/rec/clep) protocol and [SNEP](https://gsi.sh/rec/snep) signatures. This is important because LSO2-compiled LSL scripts, while slow, move between regions very quickly, so still have some utility.
 
 The overarching strategy of En is to let scripters focus on the code, not the infrastructure.
 
@@ -224,33 +207,22 @@ Certain En features require that you define certain flags or variables before th
 
 The En framework provides a "central database" of "little programs" for all sorts of "functions" in the "society" of scripting, of which many need to be "properly timed" to run on certain events... so the name just made sense.
 
-### Why use En/LSL compared to raw LSL?
-
-En is intended for complex projects, especially "networked" scripts - that is, one or more objects with multiple scripts that need a standardized and efficient way to communicate with each other. The performance impact of multiple scripts in an object is trivial, but LSL is not designed to handle these sorts of scenarios well at runtime.
-
-For example, if an object has multiple scripts in a prim and you need to use `llMessageLinked` to send a message to one of them, there is simply no way to do that without triggering `link_message` in every single script in the prim. enCLEP, therefore, includes a filter to optionally target a specific script, so if/when a different script receives that message, the enCLEP handler in the other script will drop the event as quickly as possible to reduce script time instead of wasting time processing the message further.
-
-While we use En for most of our projects, there are still some limited circumstances where raw LSL is good enough or provides a slight edge in performance. Generally, En is designed for scaling at the expense of script memory and some limited performance in certain scenarios in simple scripts. It is primarily efficient in a code-factoring sense - that is, by using En functions, En scripts do not unnecessarily duplicate code that could be consolidated into a single function.
-
-### Why use En/LSL compared to SLua in general?
+### Why use En/LSL compared to En/SLua or SLua in general?
 
 Several reasons:
 - LSO2-compiled scripts cross region borders quicker than any other scripts; this is useful for, e.g., vehicles with small scripts that cannot be consolidated due to technical limitations.
 - LSL scripts often do not justify being rewritten entirely in Lua. We have over 20 years of products and services built in LSL in varying states of completion and support; many En concepts are formalizations of unwritten standards and practices that can be easily "transposed" into En to improve maintainability of existing scripts without needing to completely rewrite them in Luau.
 - En development began before Luau implementation was announced. For most of En's development, "SLua" had no preprocessing or `require()`s, making it impossible to implement En in anything other than LSL. With the release of the official [SL VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin), these features now exist for SLua.
-- Luau support is currently in open beta and is limited to specific Luau-enabled regions. When Luau is released to production regions and is editable in a Linux viewer, we will port En to it, because key Luau features happen to be the core purpose of the En framework anyway (data structures, dynamic event subscription, multiple event handlers, coroutines, multiple timers), so a lot of the extant En superstructure can be simplified in Luau.
+- SLua support is currently in open beta and is limited to specific SLua-enabled regions.
+However, in general, SLua natively implements a significant portion of the En/LSL framework and should be used to optimize memory usage whenever possible.
 
-### Don't the additional function definitions increase script memory?
+### Don't the additional function definitions increase script memory compared to writing code "in-line"?
 
 En dynamically generates event handlers depending on the flags you define in the script. For example, defining `FEATURE_ENCLEP_USE_CHAT` creates a `listen` event handler, passing CLEP requests to `enCLEP_messages()` and any other messages to `en_listen()` if `EVENT_EN_LISTEN` is defined.
 
 Since LSL does not support dynamic event subscription or multiple event handlers, the only way to accomplish this is to have En generate event handlers itself and pass events to En-defined and user-defined functions depending on which features are enabled.
 
 Passing events to user-defined functions only adds a trivial amount of memory usage. (Functions have not implicitly allocated 512 bytes in Mono since at least 2013.)
-
-### If I don't need any of the En functions, why use En at all?
-
-En also provides a limited set of basic functionality that is always enabled unless specifically disabled via flags. For example, if the `"stop"` linkset data pair contains a truthy value, En will automatically stop the script on `state_entry`. This can be used for, e.g., updater and script distribution tools that have scripts inside them that must never run until added to another object.
 
 ## License
 
