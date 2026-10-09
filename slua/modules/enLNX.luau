@@ -17,6 +17,10 @@ enLNX.SCOPE = {
 enLNX._scriptname = ""
 enLNX._primuuid = NULL_KEY
 
+--[[
+Mandatory initlaization function.
+@param _enConsole enConsole
+]]
 function enLNX.Init(
     _enConsole: typeof(require("enConsole"))
 ): ()
@@ -42,6 +46,12 @@ function enLNX._Header(scope: string, linknum: number?, script: string?): string
     end
 end
 
+--[[
+Converts a linkset data pair name into an LNX path.
+(Splits string and removes LNX prim/script headers.)
+@param pair Linkset data pair name
+@return Table (list) of path elements
+]]
 function enLNX.PairToPath(pair: string): {string}
     if pair == "" then return {} end
     local path = string.split(pair, "\n")
@@ -50,10 +60,25 @@ function enLNX.PairToPath(pair: string): {string}
     return path
 end
 
+--[[
+Converts an LNX scope, path, link number, and script name into a linkset data pair name.
+@param scope Any enLNX.SCOPE.* constant
+@param path LNX path
+@param linknum Optional: link number for prim and script scopes (default LINK_THIS)
+@param script Optional: script name for script scopes (default this script)
+@return Linkset data pair name
+]]
 function enLNX.PathToPair(scope: string, path: {string}, linknum: number?, script: string?): string
     return enLNX._Header(scope, linknum, script) .. table.concat(path, "\n")
 end
 
+--[[
+Writes to an LNX path.
+@param scope Any enLNX.SCOPE.* constant
+@param path LNX path
+@param data Any value, or nil
+@param linknum Optional: link number for prim and script scopes (default LINK_THIS)
+]]
 function enLNX.Write(scope: string, path: {string}, data: any?, linknum: number?): boolean
     assert(enLNX._init, `Run enLNX.Init() first`)
     local value = ""
@@ -63,6 +88,13 @@ function enLNX.Write(scope: string, path: {string}, data: any?, linknum: number?
     return ll.LinksetDataWrite(enLNX.PathToPair(scope, path, linknum), value) ~= 0
 end
 
+--[[
+Reads a specified LNX path.
+@param scope Any enLNX.SCOPE.* constant
+@param path LNX path
+@param linknum Optional: link number for prim and script scopes (default LINK_THIS)
+@param script Optional: script for script scope (default this script)
+]]
 function enLNX.Read(scope: string, path: {string}, linknum: number?, script: string?): any?
     assert(enLNX._init, `Run enLNX.Init() first`)
     local value = ll.LinksetDataRead(enLNX.PathToPair(scope, path, linknum, script))
@@ -78,6 +110,11 @@ function enLNX.Read(scope: string, path: {string}, linknum: number?, script: str
     return nil
 end
 
+--[[
+Resets the LNX datastore for a specified scope.
+@param scope Any enLNX.SCOPE.* constant
+@param linknum Optional: link number for prim and script scopes (default LINK_THIS)
+]]
 function enLNX.Reset(scope: string, linknum: number?): (number, number)
     assert(enLNX._init, `Run enLNX.Init() first`)
     local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum))}.*$`, "")
@@ -87,56 +124,113 @@ function enLNX.Reset(scope: string, linknum: number?): (number, number)
     return deleted, denied
 end
 
-function enLNX.Delete(scope: string, path: {string}, linknum: number?): boolean
+--[[
+Deletes a specified path from the specified LNX datastore scope.
+@param scope Any enLNX.SCOPE.* constant
+@param path LNX path
+@param linknum Optional: link number for prim and script scopes (default LINK_THIS)
+@return Any LINKSETDATA_* constant
+]]
+function enLNX.Delete(scope: string, path: {string}, linknum: number?): number
     assert(enLNX._init, `Run enLNX.Init() first`)
-    if ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}$`, "")[1] == 1 then
-        return true
+    return ll.LinksetDataDelete(enLNX.PathToPair(scope, path, linknum))
+end
+
+--[[
+Deletes all children of a specified path.
+@param scope Any enLNX.SCOPE.* constant
+@param path LNX path of parent
+@param linknum Optional: link number for prim and script scopes (default LINK_THIS)
+@param recursive Optional: if true, all children are recursively deleted; if false, only one level down
+@return number of deleted pairs, number of pairs that could not be deleted
+]]
+function enLNX.DeleteChildren(scope: string, path: {string}, linknum: number?, recursive: boolean?): (number, number)
+    assert(enLNX._init, `Run enLNX.Init() first`)
+    local recurse = ".*"
+    if recursive then
+        recurse = "[^\n]*"
     end
-    return false
-end
-
-function enLNX.DeleteChildren(scope: string, path: {string}, linknum: number?): (number, number)
-    assert(enLNX._init, `Run enLNX.Init() first`)
-    local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}\n[^\n]*$`, "")
+    local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}\n{recurse}$`, "")
     local deleted = tonumber(result[1])
     local denied = tonumber(result[2])
     if not deleted or not denied then return 0, 0 end
     return deleted, denied
 end
 
-function enLNX.DeleteChildrenRecursive(scope: string, path: {string}, linknum: number?): (number, number)
+--[[
+Returns all pairs matching a specified scope and path, plus an optional regex suffix.
+If the suffix isn't provided, this will only return the provided path (1 result), but is much more memory efficient than testing its existence by reading it.
+@param scope Any enLNX.SCOPE.* constant
+@param path LNX path of parent (or target if no suffix)
+@param start Optional: start index of returned range
+@param count Optional: count of returned range
+@param linknum Optional: link number for prim and script scopes (default LINK_THIS)
+@param suffix Optional: regex suffix for searching children
+@return Table of linkset data pair names (see enLNX.PairToPath)
+]]
+function enLNX.Find(scope: string, path: {string}, start: number?, count: number?, linknum: number?, suffix: string?): {string}
     assert(enLNX._init, `Run enLNX.Init() first`)
-    local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}\n.*$`, "")
-    local deleted = tonumber(result[1])
-    local denied = tonumber(result[2])
-    if not deleted or not denied then return 0, 0 end
-    return deleted, denied
+    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}{suffix or ""}$`, start or 1, count or 0)
 end
 
-function enLNX.Find(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {string}
-    assert(enLNX._init, `Run enLNX.Init() first`)
-    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}$`, start or 1, count or 0)
-end
-
+--[[
+Returns all direct (first-level) children of a specified scope and path.
+@param scope Any enLNX.SCOPE.* constant
+@param path LNX path of parent
+@param start Optional: start index of returned range
+@param count Optional: count of returned range
+@param linknum Optional: link number for prim and script scopes (default LINK_THIS)
+@return Table of linkset data pair names (see enLNX.PairToPath)
+]]
 function enLNX.FindChildren(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {string}
-    assert(enLNX._init, `Run enLNX.Init() first`)
-    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}\n[^\n]*$`, start or 1, count or 0)
+    return enLNX.Find(scope, path, start, count, linknum, "[^\n]*")
 end
 
+--[[
+Returns all recursive children of a specified scope and path.
+@param scope Any enLNX.SCOPE.* constant
+@param path LNX path of parent
+@param start Optional: start index of returned range
+@param count Optional: count of returned range
+@param linknum Optional: link number for prim and script scopes (default LINK_THIS)
+@return Table of linkset data pair names (see enLNX.PairToPath)
+]]
 function enLNX.FindChildrenRecursive(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {string}
-    assert(enLNX._init, `Run enLNX.Init() first`)
-    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}\n.*$`, start or 1, count or 0)
+    return enLNX.Find(scope, path, start, count, linknum, ".*")
 end
 
+--[[
+Tests to see if a specified scope and path exist.
+@param scope Any enLNX.SCOPE.* constant
+@param path LNX path
+@param linknum Optional: link number for prim and script scopes (default LINK_THIS)
+@return true if exists, false if not
+]]
 function enLNX.Exists(scope: string, path: {string}, linknum: number?): boolean
     return next(enLNX.Find(scope, path, 1, 1, linknum)) ~= nil
 end
 
+--[[
+Finds linkset data pair key names that match the specified regex-formatted string, with a header automatically prepended for a specified scope.
+@param scope Any enLNX.SCOPE.* constant
+@param regex Any regex-formatted string that defines the path section of the linkset data pair name
+@param start Optional: start index of returned range
+@param count Optional: count of returned range
+@param linknum Optional: link number for prim and script scopes (default LINK_THIS)
+@return Table of linkset data pair names (see enLNX.PairToPath)
+]]
 function enLNX.FindRegex(scope: string, regex: string, start: number?, count: number?, linknum: number?): {string}
     assert(enLNX._init, `Run enLNX.Init() first`)
     return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX._Header(scope, linknum))}{regex}$`, start or 1, count or 0)
 end
 
+--[[
+Deletes linkset data pairs that match a specified regex-formatted string, with a header automatically prepended for a specified scope.
+@param scope Any enLNX.SCOPE.* constant
+@param regex Any regex-formatted string that defines the path section of the linkset data pair name
+@param linknum Optional: link number for prim and script scopes (default LINK_THIS)
+@return number of deleted pairs, number of pairs that could not be deleted
+]]
 function enLNX.DeleteRegex(scope: string, regex: string, linknum: number?): (number, number)
     assert(enLNX._init, `Run enLNX.Init() first`)
     local result = ll.LinksetDataDeleteFound(`^{enEscape.Regex(enLNX._Header(scope, linknum))}{regex}$`, "")
