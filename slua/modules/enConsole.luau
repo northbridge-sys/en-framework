@@ -4,9 +4,9 @@ local enSNEPTypes = require("@en-framework/types/enSNEPTypes")
 
 --[[
 The enConsole module is a logging library with support for directing logs to another script as necessary at runtime.
-By default, it sends all logs of type Print, Fatal, Error, Warn, or Info to the owner.
+By default, it sends all logs of type Success, Print, Fatal, Error, Warn, or Info to the owner.
 The owner can change the log level by changing the "loglevel" linkset data pair to the appropriate enConsole.LEVEL.* constant (0-6).
-This module also passes any logs back via enConsole._callbacks.log so you can record them manually elsewhere.
+This module also passes any logs back via the callbacks_log function passed with enConsole.Init() so you can record them manually elsewhere.
 If enCLEP, enListen, enSNEP, and a debug secret are passed into enConsole.Init(...), the module will allow third-party objects to capture logs.
 This can only be done if the object negotiates a connection with a SNEP-signed CLEP message using the same secret.
 LNX is not used to avoid a cyclic dependency.
@@ -78,6 +78,10 @@ function enConsole.Init(
     end
 end
 
+--[[
+Gets current loglevel as a number.
+@return Current loglevel
+]]
 function enConsole.GetLoglevel(): number
     local lsd_level = tonumber(ll.LinksetDataRead("loglevel"))
     if lsd_level and lsd_level ~= 0 then
@@ -86,16 +90,46 @@ function enConsole.GetLoglevel(): number
     return 4 -- default Info
 end
 
+--[[
+Generic logging function. Requires a numeric loglevel.
+Use .Trace, .Debug, .Info, .Warn, .Error, .Fatal, or .Success, which call this function, instead for most cases.
+@param level Loglevel number of message
+@param message String to pass to log
+@param target_uuid Optional: log message is sent to a specific UUID on channel 0 instead of printed to the owner
+]]
 function enConsole.Log(level: number, message: string, target_uuid: uuid?): ()
     local func_name, line = debug.info(3, "nl")
     local lsd_level = enConsole.GetLoglevel()
     if enConsole._callbacks.log then
+        -- run callback_log
         enConsole._callbacks.log(message, level, lsd_level, func_name, line, target_uuid)
+    end
+    local memory_used_pct = string.format("%.2f", 100.0 * ll.GetUsedMemory() / ll.GetMemoryLimit())
+    if enConsole._debugger then
+        -- send via CLEP to registered debugger
+        enCLEP.Send(
+            enConsole._snep_key,
+            {prim = enConsole._debugger},
+            "enConsole",
+            {"Log"},
+            {
+                message = message,
+                level = level,
+                lsd = lsd_level,
+                func = func_name,
+                line = line,
+                target = target_uuid,
+                mem = memory_used_pct
+            },
+            nil,
+            nil,
+            nil,
+            true
+        )
     end
     if lsd_level >= level then
         if lsd_level >= 5 then
             local short_time = string.sub(ll.GetTimestamp(), 12, 22)
-            local memory_used_pct = string.format("%.2f", 100.0 * ll.GetUsedMemory() / ll.GetMemoryLimit())
             local uuid_head = string.sub(tostring(ll.GetKey()), 1, 4)
             local script_name = ll.GetScriptName()
             message = `🔽 [{short_time}] ({uuid_head} {memory_used_pct}%) "{script_name}" {func_name} @ {line}\n` .. message
@@ -110,6 +144,11 @@ function enConsole.Log(level: number, message: string, target_uuid: uuid?): ()
     end
 end
 
+--[[
+Prints "✅ SUCCESS: " and the message to the log at the mandatory print loglevel.
+
+@param 
+]]
 function enConsole.Success(message: string, target_uuid: uuid?): ()
     enConsole.Log(enConsole.LEVEL.Print, "✅ SUCCESS: " .. message, target_uuid)
 end
