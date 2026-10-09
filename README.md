@@ -170,9 +170,9 @@ We recommend requiring each module into its own table so that its function names
 
 Note that you should not `require()` more than the modules you need for your script; SLua currently does no optimization of unused code.
 
-## Reference Guide
+## Additional Information
 
-The complete reference guide for En is located on the [NBS Documentation portal](https://docs.northbridgesys.com/en-framework).
+Additional reference information for En is located on the [NBS Documentation portal](https://docs.northbridgesys.com/en-framework).
 
 ## Frequently Asked Questions
 
