@@ -1,6 +1,9 @@
 local enDump = {}
 
---- Recursively dump a table to a string.
+--[[
+Recursively dump a table to a string.
+@param t Any table
+]]
 function enDump.Table(t: {}?): string
     return enDump._Table(t, 0)
 end

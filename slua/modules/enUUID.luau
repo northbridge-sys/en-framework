@@ -2,9 +2,11 @@
 
 local enUUID = {}
 
---- Determines if a UUID exists in this region.
--- @param input Any UUID.
--- @result true if it exists, false otherwise.
+--[[
+Determines if a UUID exists in this region.
+@param input Any UUID.
+@result true if it exists, false otherwise.
+]]
 function enUUID.IsInRegion(input: uuid): boolean
     -- is it an avatar?
     if enUUID.IsAvatarInRegion(input) then
@@ -15,9 +17,11 @@ function enUUID.IsInRegion(input: uuid): boolean
     return enUUID.IsPrimInRegion(input)
 end
 
---- Determines if a uuid is an avatar that exists in this region.
--- @param input Any uuid.
--- @result true if it is an avatar in this region, false otherwise.
+--[[
+Determines if a uuid is an avatar that exists in this region.
+@param input Any uuid.
+@result true if it is an avatar in this region, false otherwise.
+]]
 function enUUID.IsAvatarInRegion(input: uuid): boolean
     -- is the input nil? if so, return false
     if not input then
@@ -32,9 +36,11 @@ function enUUID.IsAvatarInRegion(input: uuid): boolean
     return true
 end
 
---- Determines if a string is a valid UUID of a prim that exists in this region.
--- @param input Any string.
--- @result true if it is a prim in this region, false otherwise.
+--[[
+Determines if a string is a valid UUID of a prim that exists in this region.
+@param input Any string.
+@result true if it is a prim in this region, false otherwise.
+]]
 function enUUID.IsPrimInRegion(input: uuid): boolean
     -- is the input nil? if so, return false
     if not input then

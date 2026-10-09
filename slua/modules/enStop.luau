@@ -10,6 +10,10 @@ This module doesn't use enLNX because it is self-contained (no dependencies). Se
 
 local enStop = {}
 
+--[[
+Check the "stop" pair, and stop the script if it is set.
+@param Optional: Linkset data pair name to read (default "stop")
+]]
 function enStop.Check(pair_name: string?): () -- note: any non-string parameter is ignored, since this is also triggered by on_rez(integer start_param)
     if not pair_name or typeof(pair_name) ~= "string" then
         pair_name = "stop"

@@ -14,15 +14,17 @@ local enListen = {
     _open = {}
 }
 
---- Opens a chat listen via ll.Listen, passing messages to a callback function if they pass optional source and type tests.
--- @param callback Callback function.
--- @param owner_only If enabled, messages received from source not owned by the same owner are silently discarded.
--- @param domain_or_channel Either a string or channel number.
--- @param name Source name filter for ll.Listen.
--- @param source_uuid Source UUID filter for ll.Listen.
--- @param message Message filter for ll.Listen.
--- @param type Either nil (pass message as-is), "" (pass result if lljson.sldecode() can decode the message, regardless of type), or a type string ("table", "string", etc. - pass result only if lljson.sldecode() returns that type)
--- @return number Handle number of ll.Listen (you don't need to save this).
+--[[
+Opens a chat listen via ll.Listen, passing messages to a callback function if they pass optional source and type tests.
+@param callback Callback function.
+@param owner_only If enabled, messages received from source not owned by the same owner are silently discarded
+@param domain_or_channel Either a string or channel number
+@param name Optional: Source name filter for ll.Listen
+@param source_uuid Optional: Source UUID filter for ll.Listen
+@param message Optional: Message filter for ll.Listen
+@param type Optional: Either nil (pass message as-is), "" (pass result if lljson.sldecode() can decode the message, regardless of type), or a type string ("table", "string", etc. - pass result only if lljson.sldecode() returns that type)
+@return Handle number of ll.Listen (you don't need to save this)
+]]
 function enListen.Open(
     callback: (
         domain: string | number,
@@ -65,9 +67,11 @@ function enListen.Open(
     enListen._open[channel] = {domain = domain_or_channel, handle = handle, owner_only = owner_only, type = type, callback = callback}
 end
 
---- Closes a chat listen opened with enListen.Open by domain or channel number instead of handle.
--- @param domain_or_channel Domain string or channel number to find.
--- @return boolean True if a listen was closed; false if none was found.
+--[[
+Closes a chat listen opened with enListen.Open by domain or channel number instead of handle.
+@param domain_or_channel Domain string or channel number to find.
+@return boolean True if a listen was closed; false if none was found.
+]]
 function enListen.Close(domain_or_channel: string | number): boolean
     local channel = enCHUF.Channel(domain_or_channel)
     if not enListen._open[channel] then return false end
@@ -82,7 +86,9 @@ function enListen.Close(domain_or_channel: string | number): boolean
     return true
 end
 
---- Closes all chat listens opened with enListen.Open.
+--[[
+Closes all chat listens opened with enListen.Open.
+]]
 function enListen.CloseAll(): ()
     for _, listener in pairs(enListen._open) do
         ll.ListenRemove(listener.handle)

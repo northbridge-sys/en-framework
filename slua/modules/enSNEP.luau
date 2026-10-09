@@ -14,8 +14,18 @@ This guarantees the author of the message, and prevents some replay attacks, but
 Prevent replay attacks completely by doing ONE of the following:
     - Only accept messages that have a unique id - essentially prevents replay attacks, but also prohibits id reuse, uses memory or datastorage, and requires pruning.
     - Check that metadata.source.prim matches payload.source.prim - eliminates source spoofing, but can't be used with relayed traffic.
+
+Refer to https://gsi.sh/rec/snep for more information on SNEP signatures.
 ]]
 
+--[[
+Generates a SNEP signature for a provided payload using a provided key.
+@param payload_raw Any string
+@param key Any enSNEP HMAC or RSA signing key
+@param expiry_seconds Optional: number of seconds until the signature expires (default 60)
+@param hash_algo Optional: hash algorithm to use (default sha256)
+@return SNEP signature string, typically passed as a CLEP header
+]]
 function enSNEP.GenerateSignature(
     payload_raw: string,
     key: enSNEPTypes.HMACKey|enSNEPTypes.RSAKeyPair,
@@ -40,6 +50,12 @@ function enSNEP.GenerateSignature(
     return lljson.encode(output)
 end
 
+--[[
+Checks to see if a SNEP signature passed for a specified payload is valid using any matching enrolled key.
+@param payload_raw String that was signed
+@param snep_token SNEP signature token from header
+@return {key_name = name of key used, sign_algo = "HMAC" or "RSA", hash_algo = hash algorithm}, or nil if the signature could not be verified
+]]
 function enSNEP.Verify(
     payload_raw: string,
     snep_token: string

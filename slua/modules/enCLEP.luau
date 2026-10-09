@@ -169,6 +169,7 @@ Starts listening to a CLEP domain via chat listen.
 @param domain CLEP domain
 @param owner_only Filters out messages from objects not owned by the same agent (also blocks messages from objects not in the region)
 @param handler_function Function that will be called with inbound CLEP chat messages that pass all built-in filters
+@param source_uuid Optional: limit listener to specific source UUID
 ]]
 function enCLEP.ListenChat(domain: string, owner_only: boolean, handler_function: (clep: enCLEPTypes.Message) -> (), source_uuid: uuid?): ()
     assert(enCLEP._init, enCLEP._initstring)
@@ -239,10 +240,15 @@ function enCLEP.ListenRemoveChatAll(): ()
     end
 end
 
+--[[
+Enables or disables a filter. By default, filters are enabled, but may be disabled for use by relays and diagnostic tools.
+@param filter Either "target.region", "target.prim", or "target.script"
+@param enable true to enable, false to disable
+]]
 function enCLEP.EnableFilter(
     filter: string,
     enable: boolean
-)
+): ()
     if filter == "target.region" then
         enCLEP._feature.FILTER_TARGET_REGION = enable
     elseif filter == "target.prim" then
@@ -255,7 +261,7 @@ end
 --[[
 Sends a message via CLEP, either via chat or link message, depending on target.
 @param key Optional: enSNEP Key to sign the message with
-@param target A table of "region" (targets only scripts in named region); "prim" (targets only scripts in identified prim); "root" (targets only scripts in linkset with identified prim as root); "link" (targets only scripts in a prim with this link number); "script" (targets only scripts with this inventory name); and "force_chat" (forces the message to be sent via chat, even if it is to another prim in the same linkset) options, all optional and combinable
+@param target A table of "region" (targets only scripts in named region); "prim" (targets only scripts in identified prim); "root" (targets only scripts in linkset with identified prim as root); "link" (targets only scripts in a prim with this link number); "script" (targets only scripts with this inventory name); and "direct" (only allows non-broadcasted methods for security) options, all optional and combinable
 @param domain CLEP domain
 @param method CLEP method (array of strings, used for message classification)
 @param params Optional: Any data (required for responses, which must return the request's clep.payload.params)
@@ -424,7 +430,7 @@ Responds to a message via CLEP, either via chat or link message, depending on th
 @param key Optional: enSNEP Key to sign the message with
 @param clep enCLEP Message to respond to
 @param result Any data
-@return Message UUID used for outbound message (can generally be ignored)
+@return Message UUID used for outbound message (can generally be ignored), or nil if no CLEP message is passed in
 ]]
 function enCLEP.Respond(
     key: enSNEPTypes.RSAKeyPair|enSNEPTypes.HMACKey?,

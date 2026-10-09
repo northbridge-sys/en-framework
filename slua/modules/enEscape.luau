@@ -2,7 +2,11 @@
 
 local enEscape = {}
 
---- Escapes a string so that it may be safely used in a regex search (like for linkset data).
+--[[
+Escapes a string so that it may be safely used in a regex search (like for linkset data).
+@param input Any string
+@return Escaped string
+]]
 function enEscape.Regex(input: string): string
     local chars = {"\\", "^", "$", "*", "+", "?", ".", "(", ")", "|", "{", "}", "[", "]"}
     for _, char in chars do

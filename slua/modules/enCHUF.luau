@@ -2,9 +2,11 @@
 
 local enCHUF = {}
 
---- Hashes a string into a number that can be safely used as a script-to-script chat channel using the CHUF: https://gsi.sh/rec/chuf
--- @param domain Domain string.
--- @return number Channel number.
+--[[
+Hashes a string into a number that can be safely used as a script-to-script chat channel using the CHUF: https://gsi.sh/rec/chuf
+@param domain_or_channel Domain string, or a channel number (passed through).
+@return Channel number.
+]]
 function enCHUF.Channel(domain_or_channel: string | number): number
     if typeof(domain_or_channel) == "number" then return domain_or_channel end -- pass numbers back as channels
     -- ORing with 0x80000000 guarantees the number is negative, which can't be sent via typical viewers
