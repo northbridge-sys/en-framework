@@ -1,60 +1,11 @@
 --!strict
 
 local enPUMA = {
-    ENCODING = {
-        ASCII = "a",
-        BASE64 = "6",
-        BASE92 = "9",
-        UNDEFINED = "*"
-    },
     SCOPE = {
         DESCRIPTION = 0x1,
         HOVERTEXT = 0x2
     }
 }
-
-function enPUMA.WritePair(link: number, key: string, value: any?, encoding: string?, scope: number?): ()
-    encoding = encoding or enPUMA.ENCODING.UNDEFINED
-    scope = scope or bit32.bor(enPUMA.SCOPE.DESCRIPTION, enPUMA.SCOPE.HOVERTEXT)
-
-    -- value encoding
-    if value then
-        if encoding == enPUMA.ENCODING.BASE64 then
-            value = llbase64.encode(tostring(value))
-        elseif encoding == enPUMA.ENCODING.BASE92 then
-            error(`BASE92 not implemented`) -- TODO
-        end
-    end
-
-    -- Invalid character check
-    local value_ok = true
-    for _, char in {"~", "|"} do -- ~ is the list separator, and | is disallowed in names and descriptions
-        -- TODO: I know there is a better way to do this, but lua's matches scare me
-        if #string.split(key, char) > 1 then
-            error(`Invalid {char} in key {key}`)
-        end
-        if value then
-            if #string.split(value, char) > 1 then
-                value_ok = false
-            end
-        end
-    end
-
-    if not value_ok then
-        -- we were passed a value as ASCII or undefined, but it can't be represented in printable PUMA-safe ASCII, so convert to base64 instead
-        encoding = enPUMA.ENCODING.BASE64
-        value = llbase64.encode(tostring(value))
-    end
-
-    -- read PUMA from prim
-    local puma = enPUMA.GetTable(ll.GetLinkKey(link))
-    if value then
-        puma[key] = encoding :: string .. value :: string
-    else
-        puma[key] = nil
-    end
-    enPUMA._WriteTable(link, scope :: number, puma)
-end
 
 function enPUMA._WriteTable(link: number, scope: number, puma: {[string]: string}): ()
     -- prioritize description, then hovertext, then name
@@ -62,37 +13,59 @@ function enPUMA._WriteTable(link: number, scope: number, puma: {[string]: string
     for key, value in puma do
         table.append(puma_list, key, value)
     end
-    local text = table.concat(puma_list, "~")
+    local text = table.concat(puma_list, "~") .. "`"
 
-    if bit32.btest(scope :: number, enPUMA.SCOPE.DESCRIPTION) then
+    if bit32.btest(scope, enPUMA.SCOPE.DESCRIPTION) then
         ll.SetLinkPrimitiveParamsFast(link, {PRIM_DESC, "!~" .. string.sub(text, 1, 125)})
         text = string.sub(text, 126)
         if #text == 0 then return end
     end
-    if bit32.btest(scope :: number, enPUMA.SCOPE.HOVERTEXT) then
+    if bit32.btest(scope, enPUMA.SCOPE.HOVERTEXT) then
         ll.SetLinkPrimitiveParamsFast(link, {PRIM_TEXT, "!~" .. string.sub(text, 1, 252), vector(0, 0, 0), 0.0})
         text = string.sub(text, 253)
         if #text == 0 then return end
     end
-    error(`enPUMA array length exceeded`)
+    
+    error(`PUMA length exceeded`)
 end
 
-function enPUMA.DecodeValue(value: string): string
-    local encoding = string.sub(value, 1, 1)
-    value = string.sub(value, 2)
-    if encoding == enPUMA.ENCODING.BASE64 then
-        return llbase64.decode(value)
-    elseif encoding == enPUMA.ENCODING.BASE92 then
-        error(`BASE92 not implemented`) -- TODO
+--[[
+Writes a pair to the PUMA datastore for a specified link number.
+Warning: invalid keys and values return errors. If you encode user data into the value, either strip invalid chars ("~", "`", "|"), encode as base64/"base92"/etc., or catch errors.
+@param key Name of pair
+@param value Value of pair (nil to erase)
+@param link Optional: Link number or LINK_* constant (default LINK_THIS)
+@param scope Optional: Any combination of enPUMA.SCOPE.* constants (default DESCRIPTION & HOVERTEXT)
+]]
+function enPUMA.WritePair(key: string, value: any?, link: number?, scope: number?): ()
+    assert(#key <= 16, `key exceeds 16 bytes: {key}`)
+
+    -- Invalid character check
+    for _, char in {"~", "`", "|"} do -- ~ is the list separator, ` is the terminator, and | is disallowed in names and descriptions
+        -- TODO: I know there is a better way to do this, but lua's matches scare me
+        assert(#string.split(key, char) == 1, `key contains invalid char: {char}: {key}`)
+        if value then
+            assert(#string.split(value, char) == 1, `value contains invalid char: {char}: {value}`)
+        end
     end
-    return value
+
+    -- read PUMA from prim
+    local puma = enPUMA.GetTable(ll.GetLinkKey(link or LINK_THIS))
+    puma[key] = value
+    enPUMA._WriteTable(link or LINK_THIS, scope or bit32.bor(enPUMA.SCOPE.DESCRIPTION, enPUMA.SCOPE.HOVERTEXT), puma)
 end
 
-function enPUMA.GetTable(prim_uuid: uuid, decode: boolean?): {}
-    local details = ll.GetObjectDetails(prim_uuid, {OBJECT_DESC, OBJECT_TEXT})
-    if #details == 0 or not details then
-        error(`Could not find prim {prim_uuid}`)
-    end
+--[[
+Gets all PUMA data for a specified prim in the region as a dictionary table.
+Returns an empty table if there is no data stored, or if the description is empty or non-compliant.
+Throws an error if the prim is not found.
+@param prim_uuid Optional: UUID of prim to read PUMA datastore of (default this prim)
+@return dictionary table of all PUMA key-value pairs
+]]
+function enPUMA.GetTable(prim_uuid: uuid?): {}
+    local details = ll.GetObjectDetails(prim_uuid or ll.GetKey(), {OBJECT_DESC, OBJECT_TEXT})
+    assert(details and #details > 0, `Prim not found: {prim_uuid}`)
+
     local text = ""
     for i = 1, 2 do
         if string.sub(details[i], 1, 2) == "!~" and #details[i] > 2 then
@@ -109,15 +82,20 @@ function enPUMA.GetTable(prim_uuid: uuid, decode: boolean?): {}
     local puma = {}
     for i = 1, #puma_list, 2 do
         puma[puma_list[i]] = puma_list[i + 1]
-        if decode then
-            puma[puma_list[i]] = enPUMA.DecodeValue(puma[puma_list[i]])
-        end
     end
     return puma
 end
 
-function enPUMA.ReadPair(prim_uuid: uuid, key: string): string?
-    local puma = enPUMA.GetTable(prim_uuid, true)
+--[[
+Gets a specified key-value pair's value from the PUMA datastore of a specified prim in the region.
+Returns nil if there is no value stored for this key, or if the description is empty or non-compliant.
+Throws an error if the prim is not found.
+@param key Pair key (name) to read
+@param prim_uuid Optional: UUID of prim with PUMA datastore to read
+@return value
+]]
+function enPUMA.ReadPair(key: string, prim_uuid: uuid?): string?
+    local puma = enPUMA.GetTable(prim_uuid)
     return puma[key]
 end
 
