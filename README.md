@@ -30,6 +30,8 @@ Some of the useful features En provides:
 - Miscellaneous additional modules for avatars, environments, inventory, object parameters, and time/dates
 - Complete utility scripts
 
+The enCLEP, enLNX, enPUMA, and enSNEP modules are reference implementations of the Global Scripting Institute (GSI) [CLEP](https://gsi.sh/rec/clep), [LNX](https://gsi.sh/rec/lnx), [PUMA](https://gsi.sh/rec/puma), and [SNEP](https://gsi.sh/rec/clep) recommendations, respectively.
+
 ## Installation
 
 You'll need to set up an include directory somewhere on your local computer that stores all scripts you want to use in Second Life. For more information on how to do this, see **Include/Require Instructions**.
