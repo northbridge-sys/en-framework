@@ -113,7 +113,7 @@ function enAsync.AwaitTyped(
 ): ...any?
     local result = {enAsync.Await(promise_to_await, timeout_seconds, ...)}
     if enMultival.IsOnlyNil(...) then
-        return ...
+        return result
     end
     local type_args = {...}
     if #type_args ~= #result then
@@ -124,7 +124,7 @@ function enAsync.AwaitTyped(
             error(`Await returned {typeof(result[i])} for arg #{i}, expected {type_args[i]}: {result[i]}`)
         end
     end
-    return ...
+    return unpack(result)
 end
 
 --[[
