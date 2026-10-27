@@ -267,7 +267,8 @@ Sends a message via CLEP, either via chat or link message, depending on target.
 @param params Optional: Any data (required for responses, which must return the request's clep.payload.params)
 @param id Optional: Force a message UUID (required for responses, which must return the request's clep.payload.id)
 @param result Optional: Any data (required for responses, to signal a response)
-@param headers Optional: dictionary of headers to pass with message (note that these are not signed)
+@param headers Optional: Dictionary of headers to pass with message (note that these are not signed)
+@param direct Optional: Throw an error if the resolved target cannot be communicated with directly (enable when transmitting secure data, like authentication keys)
 @return Message UUID used for outbound message (can be awaited, though there is no guarantee of a response)
 ]]
 function enCLEP.Send(
