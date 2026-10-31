@@ -170,7 +170,7 @@ If the suffix isn't provided, this will only return the provided path (1 result)
 ]]
 function enLNX.Find(scope: string, path: {string}, start: number?, count: number?, linknum: number?, suffix: string?): {string}
     assert(enLNX._init, `Run enLNX.Init() first`)
-    return ll.LinksetDataFindKeys(`^{enEscape.Regex(enLNX.PathToPair(scope, path, linknum))}{suffix or ""}$`, start or 1, count or 0)
+    return ll.LinksetDataFindKeys("^" .. enEscape.Regex(enLNX.PathToPair(scope, path, linknum)) .. (suffix or "") .. "$", start or 1, count or 0)
 end
 
 --[[
@@ -183,7 +183,7 @@ Returns all direct (first-level) children of a specified scope and path.
 @return Table of linkset data pair names (see enLNX.PairToPath)
 ]]
 function enLNX.FindChildren(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {string}
-    return enLNX.Find(scope, path, start, count, linknum, "[^\n]*")
+    return enLNX.Find(scope, path, start, count, linknum, "\n[^\n]*")
 end
 
 --[[
@@ -196,7 +196,7 @@ Returns all recursive children of a specified scope and path.
 @return Table of linkset data pair names (see enLNX.PairToPath)
 ]]
 function enLNX.FindChildrenRecursive(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {string}
-    return enLNX.Find(scope, path, start, count, linknum, ".*")
+    return enLNX.Find(scope, path, start, count, linknum, "\n.*")
 end
 
 --[[
