@@ -55,8 +55,8 @@ Converts a linkset data pair name into an LNX path.
 function enLNX.PairToPath(pair: string): {string}
     if pair == "" then return {} end
     local path = string.split(pair, "\n")
-    table.remove(path) -- remove prim
-    table.remove(path) -- remove script
+    table.remove(path, 1) -- remove prim
+    table.remove(path, 1) -- remove script
     return path
 end
 
