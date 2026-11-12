@@ -34,79 +34,34 @@ The enCLEP, enLNX, enPUMA, and enSNEP modules are reference implementations of t
 
 ## Installation
 
-You'll need to set up an include directory somewhere on your local computer that stores all scripts you want to use in Second Life. For more information on how to do this, see **Include/Require Instructions**.
+You'll need to set up an include directory somewhere on your local computer that stores all scripts you want to use in Second Life.
 
 For the latest **development** release:
 - Create a directory called `northbridge-sys` in your include directory if it doesn't exist.
 - Inside the `northbridge-sys` directory, clone the repository into your preprocessor include directory using the command `git clone https://github.com/northbridge-sys/en-framework.git`. This will create the `en-framework` directory and clone the latest commit into it.
 
-Or, for the current **stable** release, or if you don't want to use git (you should, especially for your own code!):
+Or, for the current **stable** release, or if you don't want to use git:
 - Create a directory called `northbridge-sys` in your include directory if it doesn't exist.
 - Create a directory called `en-framework` in the `northbridge-sys` directory.
 - [Download](https://github.com/northbridge-sys/en-framework/archive/main.zip) and unpack the repository into the `en-framework` directory, so that `README.md` is located in `[include directory]/northbridge-sys/en-framework/README.md` (or with backslashes - \ - for Windows users). **Make sure you don't name the folder "en-framework-main", or the framework won't load correctly!**
 
 Note that you'll need to repeat this process for each update; there is no auto-updater.
 
-Depending on if you want LSL or SLua support, follow one or both of the following sections:
+Unless you have a reason not to, you should store all of your LSL and SLua files somewhere within a unified "include directory" for Second Life scripts on your PC; typically in your Documents or home directory. Your include directory should be set wherever you need an LSL preprocessor include path. (To make it easier to load modules between different repositories, we recommend doing this even for SLua, which does not support a predefined include path.)
 
-### LSL Configuration
+LSL requires the LSL Preprocessor:
+- Use [Visual Studio Code](https://code.visualstudio.com/) with the [official Second Life VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin) to preprocess and upload scripts directly
+- Alternatively, write directly in any editor you want, and `#include` entire LSL scripts at compile time using a third-party viewer with a built-in LSL Preprocessor, such as [Firestorm Viewer](https://www.firestormviewer.org/)
 
-*If you're only interested in SLua, you can skip this section.*
-
-LSL requires the LSL Preprocessor. If you have not used it before, there are several methods:
-- Preprocessing automatically in [Visual Studio Code](https://code.visualstudio.com/) using the [official Second Life VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin) to connect to a running Second Life viewer to upload preprocessed scripts
-- Writing directly in any editor you want, and `#include` entire LSL scripts at compile time using a third-party viewer with a built-in LSL Preprocessor, such as [Firestorm Viewer](https://www.firestormviewer.org/)
-- Both of the above combined (the official plugin also checks for errors as you type, and VSCode is better than the built-in editor)
-
-If you install the official VSCode plugin, make sure to install the additional recommended plugins.
+SLua currently requires [Visual Studio Code](https://code.visualstudio.com/) and the [official Second Life VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin).
 
 For the viewer and/or VSCode to know where the En Framework (and your other scripts) are loaded, you will need to set the preprocessor include path in both your viewer and the VSCode plugin's configurations; see their respective instructions.
 
-Make sure to enable the "script optimizer" option in your preprocessor(s); En modules are all loaded together and will crash your compiler if it is not enabled.
+Make sure to enable the "script optimizer" option in your LSL preprocessor if used; En modules are all loaded together and will crash your compiler if it is not enabled.
 
-**Note that there is currently a bug in the VSCode preprocessor that causes it to break on certain modules; this causes spurious error underlining, but the script can still compile and run.**
+**Note that there is currently a bug in the VSCode preprocessor that causes it to break on certain modules in LSL; this causes spurious error underlining, but the script can still compile and run.**
 
-### SLua Configuration
-
-*If you're only interested in LSL, you can skip this section.*
-
-SLua currently requires [Visual Studio Code](https://code.visualstudio.com/) and the [official Second Life VSCode Plugin](https://github.com/secondlife/sl-vscode-plugin). Make sure to install the additional recommended plugins. No viewers have built-in support for SLua `require()` processing as of this version.
-
-SLua does not currently support tree-shaking; all code you write or require counts against memory, and duplicate requires cost memory. Therefore, SLua modules must be required manually.
-
-## Include/Require Instructions
-
-Unless you have a reason not to, you should store all of your LSL and SLua files somewhere within a unified "include directory" for Second Life scripts on your PC; typically in your Documents or home directory. Your include directory should be set wherever you need an LSL preprocessor include path. (To make it easier to load third-party modules, we recommend doing this even for SLua, which does not currently support a predefined include path.)
-
-Ideally, your include directory should look like this:
-
-```
-. (include directory)
-├── my-organization
-│   └── my-project
-│       ├── .luaurc
-│       └── New Script.luau
-└── northbridge-sys
-    └── en-framework
-        ├── lsl
-        │   ├── event-handlers
-        │   │   └── ...
-        │   ├── modules
-        │   │   └── ...
-        │   ├── utilities
-        │   │   └── ...
-        │   ├── \_functions.lsl
-        │   ├── \_macros.lsl
-        │   ├── event-handlers.lsl
-        │   └── modules.lsl
-        ├── slua
-        │   ├── modules
-        │   │   └── ...
-        │   └── tests
-        │       └── ...
-        ├── LICENSE
-        └── README.md
-```
+## Importing and Using En
 
 ### #include (LSL)
 
@@ -120,7 +75,7 @@ First, `#define` any needed `EVENT_`, `FEATURE_`, `OVERRIDE_`, and `TRACE_` flag
 #define OVERRIDE_ENLOG_DEFAULT_LOGLEVEL 6
 ```
 
-Then, include all LSL modules (unused code gets removed by the "script optimizer" option):
+Then, include all LSL modules:
 
 ```
 #include "northbridge-sys/en-framework/lsl/modules.lsl"
@@ -154,11 +109,11 @@ default
 }
 ```
 
-Compile and run. If your preprocessor include path is set correctly, it should run!
+Compile and run.
 
 ### require() (SLua)
 
-If you followed the recommended include directory layout, copy the `.luaurc` file from the `en-framework/slua` directory into the root of your project; it should create a link back through your include directory. If not, you may need to correct the path in `.luaurc` depending on your file layout.
+Copy the `.luaurc` file from the `en-framework/slua` directory into the root of your project; it should create a link back through your include directory. If not, you may need to correct the path in `.luaurc` depending on your file layout. If your project already has a `.luaurc` file, copy the line for `"@en-framework"` to the existing file.
 
 Libraries (modules or ModuleScripts) can then be loaded individually using `require()` at the top of any script in that project:
 
@@ -166,9 +121,38 @@ Libraries (modules or ModuleScripts) can then be loaded individually using `requ
 local enConsole = require("@en-framework/enConsole")
 ```
 
-We recommend requiring each module into its own table so that its function names match the documentation.
+We recommend requiring each module into its own table so that its function names match the 
+documentation.
+
+Some En modules have an `.Init()` function for lazy loading; this should be called with necessary dependencies on script start.
 
 Note that you should not `require()` more than the modules you need for your script; SLua currently does no optimization of unused code.
+
+## Installing Other Repositories
+
+The En Framework is used by other products that need the En Framework installed alongside a specific toolkit repository. It is important that these repositories are located in a specific shared location on your computer. For example, if you also installed some other repository by NBS and you are working externally on your own SLua project, your include directory would look similar to this:
+
+```
+. (include directory)
+├── my-organization
+│   └── my-project
+│       ├── .luaurc
+│       └── New Script.luau
+└── northbridge-sys
+    ├── en-framework
+    │   ├── lsl
+    │   │   └── ...
+    │   ├── slua
+    │   │   └── ...
+    │   ├── LICENSE
+    │   └── README.md
+    └── other-nbs-toolkit
+        ├── ...
+        ├── LICENSE
+        └── README.md
+```
+
+Follow the instructions above to set up your viewer or VSCode to be able to import scripts from your computer into scripts uploaded to Second Life.
 
 ## Additional Information
 
