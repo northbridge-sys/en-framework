@@ -73,6 +73,25 @@ function enLNX.PathToPair(scope: string, path: {string}, linknum: number?, scrip
 end
 
 --[[
+Converts a raw linkset data value back into its original form by sldecoding it.
+This is done automatically by enLNX; only use this function if you are reading data raw via ll.LinksetDataRead.
+@param value Value returned by ll.LinksetDataRead
+@return Original typed variable stored in this value, or nil if malformatted or empty
+]]
+function enLNX.Decode(value: string?): any?
+    if value and value ~= "" then
+        local success, data = pcall(lljson.sldecode, value)
+        if not success then
+            -- not an empty datastore pair, but also not slencoded data
+            enConsole.Warn(`Malformatted LNX data: An incompatible script may have been added to this object`)
+            return nil
+        end
+        return data
+    end
+    return nil
+end
+
+--[[
 Writes to an LNX path.
 @param scope Any enLNX.SCOPE.* constant
 @param path LNX path
@@ -97,17 +116,7 @@ Reads a specified LNX path.
 ]]
 function enLNX.Read(scope: string, path: {string}, linknum: number?, script: string?): any?
     assert(enLNX._init, `Run enLNX.Init() first`)
-    local value = ll.LinksetDataRead(enLNX.PathToPair(scope, path, linknum, script))
-    if value and value ~= "" then
-        local success, data = pcall(lljson.sldecode, value)
-        if not success then
-            -- not an empty datastore pair, but also not slencoded data
-            enConsole.Warn(`Failed to read LNX data\nScope {scope}, link {linknum}, script "{script}", path ["{table.concat(path, `", "`)}"]: {value}\n{data}`)
-            return nil
-        end
-        return data
-    end
-    return nil
+    return enLNX.Decode(ll.LinksetDataRead(enLNX.PathToPair(scope, path, linknum, script)))
 end
 
 --[[
@@ -180,7 +189,7 @@ Returns all direct (first-level) children of a specified scope and path.
 @param start Optional: start index of returned range
 @param count Optional: count of returned range
 @param linknum Optional: link number for prim and script scopes (default LINK_THIS)
-@return Table of linkset data pair names (see enLNX.PairToPath)
+@return Table of linkset data pair names (see enLNX.PairToPath, enLNX.Decode)
 ]]
 function enLNX.FindChildren(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {string}
     return enLNX.Find(scope, path, start, count, linknum, "\n[^\n]*")
@@ -193,7 +202,7 @@ Returns all recursive children of a specified scope and path.
 @param start Optional: start index of returned range
 @param count Optional: count of returned range
 @param linknum Optional: link number for prim and script scopes (default LINK_THIS)
-@return Table of linkset data pair names (see enLNX.PairToPath)
+@return Table of linkset data pair names (see enLNX.PairToPath, enLNX.Decode)
 ]]
 function enLNX.FindChildrenRecursive(scope: string, path: {string}, start: number?, count: number?, linknum: number?): {string}
     return enLNX.Find(scope, path, start, count, linknum, "\n.*")
