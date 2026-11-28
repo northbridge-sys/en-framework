@@ -31,8 +31,8 @@ function enAsync._Timeout(
 ): ()
     -- something timed out, return the await as nil (resumes coroutine)
     local args = {...}
-    if typeof(args[1]) == "thread" then
-        coroutine.resume(args[1], nil)
+    if typeof(args[1]) == "uuid" then
+        coroutine.resume(enAsync._awaiting[args[1]].co, nil)
     end
 end
 
